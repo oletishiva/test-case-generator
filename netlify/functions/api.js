@@ -65,7 +65,7 @@ exports.handler = async (event, context) => {
       } : undefined,
       gemini: geminiKey ? {
         apiKey: geminiKey,
-        model: 'gemini-1.0-pro',
+        model: 'gemini-2.5-flash',
         maxOutputTokens: 4000,
         temperature: 0.3
       } : undefined

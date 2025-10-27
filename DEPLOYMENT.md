@@ -109,7 +109,7 @@ NODE_ENV=production npm run api
 
 ### Supported AI Services
 - ✅ OpenAI (GPT-4, GPT-4o-mini, etc.)
-- ✅ Google Gemini (gemini-1.0-pro, etc.)
+- ✅ Google Gemini (gemini-2.5-flash, etc.)
 - ✅ Automatic fallback between services
 
 ## 🔒 Security Considerations
