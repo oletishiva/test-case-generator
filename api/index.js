@@ -62,12 +62,12 @@ app.post('/api/generate', async (req, res) => {
           model: 'gpt-4o-mini',
           maxTokens: 2000
         } : undefined,
-        gemini: geminiKey ? {
-          apiKey: geminiKey,
-          model: 'gemini-2.5-flash',
-          maxOutputTokens: 4000,
-          temperature: 0.3
-        } : undefined
+            gemini: geminiKey ? {
+              apiKey: geminiKey,
+              model: 'gemini-2.5-flash',
+              maxOutputTokens: 2000,
+              temperature: 0.3
+            } : undefined
       };
 
       const aiService = new HybridAIService(aiConfig);
