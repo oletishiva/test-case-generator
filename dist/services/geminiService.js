@@ -52,22 +52,30 @@ Format: [{"title":"Test 1","type":"Positive","priority":"High","steps":["step1",
         }
     }
     async generatePlaywrightCode(requirement, testCases) {
-        const prompt = `You are a senior QA Automation Engineer. Generate Playwright TypeScript test code using @playwright/test for the given requirement and test cases.
-
-Requirements:
-1. Use @playwright/test framework
-2. Generate individual test functions for each test case
-3. Use modern Playwright selectors (getByText, getByRole, etc.)
-4. Include proper assertions with expect()
-5. Use realistic selectors and interactions
-6. Add proper test descriptions
-7. Handle both positive and negative test cases
+        const testCasesString = JSON.stringify(testCases, null, 2);
+        const prompt = `You are a Playwright automation architect. Generate minimal, maintainable Playwright TypeScript code using the Page Object Model (POM) pattern.
 
 Requirement: "${requirement}"
 
-Test Cases: ${JSON.stringify(testCases, null, 2)}
+Test Cases (JSON):
+${testCasesString}
 
-Generate complete Playwright test file with imports and all test functions.`;
+✅ Requirements:
+- Use TypeScript + Playwright test runner
+- Create BasePage class with common methods (navigateTo, takeScreenshot, waitForPageLoad)
+- Create specific page class extending BasePage with locators and methods
+- Generate test file using Playwright's \`test\` that creates page objects and runs tests
+- Use \`getByRole\`, \`getByPlaceholder\`, \`getByText\` locators
+- Include minimal console logs
+- Keep classes short (~100 lines max)
+- Clean and readable code
+
+Generate 3 files with clear separators:
+1. BasePage.ts - Common page methods
+2. [Feature]Page.ts - Specific page with locators  
+3. [feature].spec.ts - Test file
+
+Format as single file with clear separators between files.`;
         try {
             const result = await this.model.generateContent(prompt);
             const response = await result.response;
@@ -75,7 +83,15 @@ Generate complete Playwright test file with imports and all test functions.`;
             if (!text) {
                 throw new Error('No response content received from Gemini');
             }
-            return text.trim();
+            // Remove markdown code block if present
+            let cleanCode = text.trim();
+            if (cleanCode.startsWith('```typescript')) {
+                cleanCode = cleanCode.replace(/^```typescript\s*/, '').replace(/\s*```$/, '');
+            }
+            else if (cleanCode.startsWith('```')) {
+                cleanCode = cleanCode.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+            return cleanCode;
         }
         catch (error) {
             console.error('Error calling Gemini API for Playwright generation:', error);

@@ -23,38 +23,98 @@ export class PlaywrightGenerator {
     }
   }
 
-  // Fallback method to generate basic Playwright code if OpenAI fails
+  // Fallback method to generate basic Playwright code if AI fails
   generateBasicPlaywrightCode(testCases: TestCase[]): string {
-    const imports = `import { test, expect } from '@playwright/test';\n\n`;
+    return `// ========================================
+// BasePage.ts - Common page methods
+// ========================================
+import { Page, expect } from '@playwright/test';
+
+export class BasePage {
+  constructor(protected page: Page) {}
+
+  async navigateTo(url: string): Promise<void> {
+    console.log(\`Navigating to: \${url}\`);
+    await this.page.goto(url);
+    await this.waitForPageLoad();
+  }
+
+  async takeScreenshot(name: string): Promise<void> {
+    await this.page.screenshot({ path: \`screenshots/\${name}.png\` });
+  }
+
+  async waitForPageLoad(): Promise<void> {
+    await this.page.waitForLoadState('networkidle');
+  }
+}
+
+// ========================================
+// LoginPage.ts - Login page specific methods
+// ========================================
+export class LoginPage extends BasePage {
+  // Locators
+  private get emailInput() { return this.page.getByPlaceholder('Email'); }
+  private get passwordInput() { return this.page.getByPlaceholder('Password'); }
+  private get loginButton() { return this.page.getByRole('button', { name: 'Login' }); }
+  private get errorMessage() { return this.page.getByText('Invalid email or password'); }
+  private get successMessage() { return this.page.getByText('Login successful'); }
+
+  // Methods
+  async login(email: string, password: string): Promise<void> {
+    console.log(\`Logging in with: \${email}\`);
+    await this.emailInput.fill(email);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
+  }
+
+  async isErrorMessageVisible(): Promise<boolean> {
+    return await this.errorMessage.isVisible();
+  }
+
+  async isSuccessMessageVisible(): Promise<boolean> {
+    return await this.successMessage.isVisible();
+  }
+}
+
+// ========================================
+// login.spec.ts - Test file
+// ========================================
+import { test, expect } from '@playwright/test';
+import { LoginPage } from './LoginPage';
+
+test.describe('Login Functionality', () => {
+  let loginPage: LoginPage;
+
+  test.beforeEach(async ({ page }) => {
+    loginPage = new LoginPage(page);
+    await loginPage.navigateTo('http://localhost:3000/login');
+  });
+
+${testCases.map((testCase, index) => {
+  const testName = testCase.title.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+  return `  test('${testCase.title}', async ({ page }) => {
+    console.log('Running: ${testCase.title}');
+    console.log('Type: ${testCase.type}');
+    console.log('Priority: ${testCase.priority}');
     
-    const testFunctions = testCases.map((testCase, index) => {
-      const functionName = this.sanitizeFunctionName(testCase.title);
-      const steps = testCase.steps.map((step, stepIndex) => {
-        // Convert step to basic Playwright actions
-        if (step.toLowerCase().includes('navigate') || step.toLowerCase().includes('go to')) {
-          return `  await page.goto('https://app.example.com');`;
-        } else if (step.toLowerCase().includes('click')) {
-          return `  await page.getByText('${this.extractClickTarget(step)}').click();`;
-        } else if (step.toLowerCase().includes('fill') || step.toLowerCase().includes('enter')) {
-          return `  await page.getByPlaceholder('${this.extractInputTarget(step)}').fill('test@example.com');`;
-        } else if (step.toLowerCase().includes('check') || step.toLowerCase().includes('verify')) {
-          return `  await expect(page.getByText('${this.extractExpectedText(step)}')).toBeVisible();`;
-        } else {
-          return `  // ${step}`;
-        }
-      }).join('\n');
-
-      const assertion = testCase.type === 'Positive' 
-        ? `  await expect(page.getByText('${this.extractExpectedText(testCase.expected_result)}')).toBeVisible();`
-        : `  await expect(page.getByText('${this.extractExpectedText(testCase.expected_result)}')).toBeVisible();`;
-
-      return `test('${testCase.title}', async ({ page }) => {
-${steps}
-${assertion}
+    // Test steps:
+${testCase.steps.map(step => `    // ${step}`).join('\n')}
+    
+    // Expected result: ${testCase.expected_result}
+    
+    // TODO: Implement specific test logic based on test case
+    if ('${testCase.type}' === 'Positive') {
+      // Positive test implementation
+      await loginPage.login('test@example.com', 'password123');
+      await expect(loginPage.isSuccessMessageVisible()).toBeTruthy();
+    } else {
+      // Negative test implementation  
+      await loginPage.login('invalid@example.com', 'wrongpassword');
+      await expect(loginPage.isErrorMessageVisible()).toBeTruthy();
+    }
+  });`;
+}).join('\n\n')}
 });`;
-    }).join('\n\n');
-
-    return imports + testFunctions;
   }
 
   private sanitizeFunctionName(title: string): string {
