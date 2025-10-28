@@ -65,7 +65,7 @@ app.post('/api/generate', async (req, res) => {
             gemini: geminiKey ? {
               apiKey: geminiKey,
               model: 'gemini-2.5-flash',
-              maxOutputTokens: 2000,
+              maxOutputTokens: 3000,
               temperature: 0.3
             } : undefined
       };
