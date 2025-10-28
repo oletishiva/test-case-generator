@@ -28,6 +28,36 @@ class TestCaseGenerator {
             };
         }
     }
+    // New method for parallel generation
+    async generateWithPlaywright(request, playwrightGenerator) {
+        try {
+            console.log('🤖 Generating test cases and Playwright code in parallel...');
+            // Start both processes in parallel
+            const [testCasesResult, playwrightResult] = await Promise.allSettled([
+                this.generate(request),
+                request.generatePlaywright ? playwrightGenerator.generatePlaywrightCode(request.requirement, []) : Promise.resolve('')
+            ]);
+            const testCases = testCasesResult.status === 'fulfilled' ? testCasesResult.value : { testCases: [], success: false };
+            const playwrightCode = playwrightResult.status === 'fulfilled' ? playwrightResult.value : '';
+            if (!testCases.success) {
+                throw new Error(testCases.error || 'Failed to generate test cases');
+            }
+            console.log(`✅ Generated ${testCases.testCases.length} test cases and Playwright code in parallel`);
+            return {
+                testCases: testCases.testCases,
+                playwrightCode,
+                success: true
+            };
+        }
+        catch (error) {
+            console.error('❌ Error in parallel generation:', error);
+            return {
+                testCases: [],
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
+        }
+    }
     parseTestCases(jsonString) {
         try {
             // Clean the JSON string - remove any markdown formatting

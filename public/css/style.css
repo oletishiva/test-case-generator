@@ -368,6 +368,30 @@ pre {
 
 .loading-spinner p {
     font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.progress-container {
+    width: 300px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-text {
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+    color: #ecf0f1 !important;
 }
 
 /* Toast Notifications */

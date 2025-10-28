@@ -89,31 +89,38 @@ export class AIRoutes {
           ? `${requirement}\n\nAcceptance Criteria:\n${acceptanceCriteria}`
           : requirement;
 
-        // Generate test cases
-        const testCaseResponse = await clientTestCaseGenerator.generate({
-          requirement: fullRequirement,
-          generatePlaywright
-        });
+            let testCaseResponse: any;
+            let playwrightCode: string | undefined;
 
-        if (!testCaseResponse.success) {
-          return res.status(500).json(testCaseResponse);
-        }
+            if (generatePlaywright) {
+              // Use parallel processing for better performance
+              console.log('🚀 Using parallel processing for test cases and Playwright code...');
+              
+              const [testCasesResult, playwrightResult] = await Promise.allSettled([
+                clientTestCaseGenerator.generate({
+                  requirement: fullRequirement,
+                  generatePlaywright: false
+                }),
+                clientPlaywrightGenerator.generatePlaywrightCode(fullRequirement, [])
+              ]);
 
-        let playwrightCode: string | undefined;
+              testCaseResponse = testCasesResult.status === 'fulfilled' ? testCasesResult.value : { testCases: [], success: false };
+              playwrightCode = playwrightResult.status === 'fulfilled' ? playwrightResult.value : '';
 
-        // Generate Playwright code if requested
-        if (generatePlaywright && testCaseResponse.testCases.length > 0) {
-          try {
-            playwrightCode = await clientPlaywrightGenerator.generatePlaywrightCode(
-              fullRequirement,
-              testCaseResponse.testCases
-            );
-          } catch (error) {
-            console.warn('⚠️  Failed to generate Playwright code, using fallback:', error);
-            // Use fallback generator
-            playwrightCode = clientPlaywrightGenerator.generateBasicPlaywrightCode(testCaseResponse.testCases);
-          }
-        }
+              if (!testCaseResponse.success) {
+                return res.status(500).json(testCaseResponse);
+              }
+            } else {
+              // Generate only test cases
+              testCaseResponse = await clientTestCaseGenerator.generate({
+                requirement: fullRequirement,
+                generatePlaywright: false
+              });
+
+              if (!testCaseResponse.success) {
+                return res.status(500).json(testCaseResponse);
+              }
+            }
 
         // Save files
         const savedFiles = await this.fileUtils.saveGeneratedTests(

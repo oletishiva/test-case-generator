@@ -61,6 +61,7 @@ class TestCaseGenerator {
         }
 
         this.showLoading(true);
+        this.updateProgress('Initializing AI services...', 10);
         this.saveConfig();
 
         try {
@@ -77,6 +78,8 @@ class TestCaseGenerator {
                 requestBody.acceptanceCriteria = this.acceptanceCriteriaTextarea.value.trim();
             }
 
+            this.updateProgress('Generating test cases and Playwright code in parallel...', 30);
+
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: {
@@ -85,20 +88,42 @@ class TestCaseGenerator {
                 body: JSON.stringify(requestBody)
             });
 
+            this.updateProgress('Processing AI response...', 70);
+
             const data = await response.json();
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to generate test cases');
             }
 
+            this.updateProgress('Finalizing results...', 90);
             this.displayResults(data);
-            this.showToast('Test cases generated successfully!', 'success');
+            this.updateProgress('Complete!', 100);
+            
+            setTimeout(() => {
+                this.showToast('Test cases generated successfully!', 'success');
+            }, 500);
 
         } catch (error) {
             console.error('Error generating test cases:', error);
             this.showToast(`Error: ${error.message}`, 'error');
         } finally {
-            this.showLoading(false);
+            setTimeout(() => {
+                this.showLoading(false);
+            }, 1000);
+        }
+    }
+
+    updateProgress(message, percentage) {
+        const progressBar = document.querySelector('.progress-bar');
+        const progressText = document.querySelector('.progress-text');
+        
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = message;
         }
     }
 

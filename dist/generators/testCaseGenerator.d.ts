@@ -4,6 +4,7 @@ export declare class TestCaseGenerator {
     private aiService;
     constructor(aiService: HybridAIService);
     generate(request: GenerationRequest): Promise<GenerationResponse>;
+    generateWithPlaywright(request: GenerationRequest, playwrightGenerator: any): Promise<GenerationResponse>;
     private parseTestCases;
 }
 //# sourceMappingURL=testCaseGenerator.d.ts.map

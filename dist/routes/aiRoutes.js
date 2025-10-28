@@ -61,24 +61,32 @@ class AIRoutes {
                 const fullRequirement = acceptanceCriteria
                     ? `${requirement}\n\nAcceptance Criteria:\n${acceptanceCriteria}`
                     : requirement;
-                // Generate test cases
-                const testCaseResponse = await clientTestCaseGenerator.generate({
-                    requirement: fullRequirement,
-                    generatePlaywright
-                });
-                if (!testCaseResponse.success) {
-                    return res.status(500).json(testCaseResponse);
-                }
+                let testCaseResponse;
                 let playwrightCode;
-                // Generate Playwright code if requested
-                if (generatePlaywright && testCaseResponse.testCases.length > 0) {
-                    try {
-                        playwrightCode = await clientPlaywrightGenerator.generatePlaywrightCode(fullRequirement, testCaseResponse.testCases);
+                if (generatePlaywright) {
+                    // Use parallel processing for better performance
+                    console.log('🚀 Using parallel processing for test cases and Playwright code...');
+                    const [testCasesResult, playwrightResult] = await Promise.allSettled([
+                        clientTestCaseGenerator.generate({
+                            requirement: fullRequirement,
+                            generatePlaywright: false
+                        }),
+                        clientPlaywrightGenerator.generatePlaywrightCode(fullRequirement, [])
+                    ]);
+                    testCaseResponse = testCasesResult.status === 'fulfilled' ? testCasesResult.value : { testCases: [], success: false };
+                    playwrightCode = playwrightResult.status === 'fulfilled' ? playwrightResult.value : '';
+                    if (!testCaseResponse.success) {
+                        return res.status(500).json(testCaseResponse);
                     }
-                    catch (error) {
-                        console.warn('⚠️  Failed to generate Playwright code, using fallback:', error);
-                        // Use fallback generator
-                        playwrightCode = clientPlaywrightGenerator.generateBasicPlaywrightCode(testCaseResponse.testCases);
+                }
+                else {
+                    // Generate only test cases
+                    testCaseResponse = await clientTestCaseGenerator.generate({
+                        requirement: fullRequirement,
+                        generatePlaywright: false
+                    });
+                    if (!testCaseResponse.success) {
+                        return res.status(500).json(testCaseResponse);
                     }
                 }
                 // Save files

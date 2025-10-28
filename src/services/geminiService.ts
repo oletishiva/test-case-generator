@@ -65,30 +65,21 @@ Example: [{"title":"Test 1","type":"Positive","priority":"High","steps":["step1"
   }
 
   async generatePlaywrightCode(requirement: string, testCases: any[]): Promise<string> {
-    const testCasesString = JSON.stringify(testCases, null, 2);
-    const prompt = `You are a Playwright automation architect. Generate minimal, maintainable Playwright TypeScript code using the Page Object Model (POM) pattern.
+    const prompt = `Generate SIMPLE Playwright TypeScript code for: "${requirement}"
 
-Requirement: "${requirement}"
+Requirements:
+- Basic locators only (getByRole, getByPlaceholder, getByText)
+- Simple functions for common actions
+- Basic test structure
+- Keep it minimal and fast
+- No complex POM patterns
 
-Test Cases (JSON):
-${testCasesString}
+Generate:
+1. Page class with locators
+2. Basic functions (login, click, fill)
+3. Simple test file
 
-✅ Requirements:
-- Use TypeScript + Playwright test runner
-- Create BasePage class with common methods (navigateTo, takeScreenshot, waitForPageLoad)
-- Create specific page class extending BasePage with locators and methods
-- Generate test file using Playwright's \`test\` that creates page objects and runs tests
-- Use \`getByRole\`, \`getByPlaceholder\`, \`getByText\` locators
-- Include minimal console logs
-- Keep classes short (~100 lines max)
-- Clean and readable code
-
-Generate 3 files with clear separators:
-1. BasePage.ts - Common page methods
-2. [Feature]Page.ts - Specific page with locators  
-3. [feature].spec.ts - Test file
-
-Format as single file with clear separators between files.`;
+Format as single file with separators.`;
 
     try {
       const result = await this.model.generateContent(prompt);
