@@ -51,7 +51,30 @@ class TestCaseGenerator {
                     cleanJson = cleanJson + '}]';
                 }
             }
-            const parsed = JSON.parse(cleanJson);
+            let parsed;
+            try {
+                parsed = JSON.parse(cleanJson);
+            }
+            catch (parseError) {
+                console.error('JSON Parse Error:', parseError);
+                console.error('Problematic JSON:', cleanJson);
+                // Try to fix common JSON issues
+                let fixedJson = cleanJson;
+                // Fix unescaped quotes in strings
+                fixedJson = fixedJson.replace(/([^\\])\\([^"\\\/bfnrt])/g, '$1\\\\$2');
+                // Fix missing commas between objects
+                fixedJson = fixedJson.replace(/}\s*{/g, '},{');
+                // Fix trailing commas
+                fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+                // Try parsing again
+                try {
+                    parsed = JSON.parse(fixedJson);
+                }
+                catch (secondError) {
+                    console.error('Second parse attempt failed:', secondError);
+                    throw new Error(`JSON parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+                }
+            }
             if (!Array.isArray(parsed)) {
                 throw new Error('Response is not an array');
             }

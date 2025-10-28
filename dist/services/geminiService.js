@@ -17,15 +17,21 @@ class GeminiService {
     async generateTestCases(requirement) {
         const prompt = `Generate 6-8 test cases for: "${requirement}"
 
-Return JSON array with:
-- title: test name
+Return ONLY valid JSON array with:
+- title: test name (no special characters)
 - type: "Positive" or "Negative"  
 - priority: "High" or "Medium"
-- steps: array of 3-4 steps
-- expected_result: outcome
+- steps: array of 3-4 steps (escape quotes properly)
+- expected_result: outcome (escape quotes properly)
 - test_data: test data if needed
 
-Format: [{"title":"Test 1","type":"Positive","priority":"High","steps":["step1","step2"],"expected_result":"result1","test_data":"data1"}]`;
+IMPORTANT: 
+- Use double quotes only
+- Escape all quotes in strings with backslash
+- No trailing commas
+- Valid JSON format only
+
+Example: [{"title":"Test 1","type":"Positive","priority":"High","steps":["step1","step2"],"expected_result":"result1","test_data":"data1"}]`;
         try {
             const result = await this.model.generateContent(prompt);
             const response = await result.response;
