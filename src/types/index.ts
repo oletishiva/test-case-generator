@@ -1,8 +1,10 @@
 export interface TestCase {
   title: string;
-  type: 'Positive' | 'Negative';
+  type: 'Positive' | 'Negative' | 'Edge Case' | 'Security' | 'Performance';
+  priority: 'High' | 'Medium' | 'Low';
   steps: string[];
   expected_result: string;
+  test_data?: string;
 }
 
 export interface GenerationRequest {

@@ -69,8 +69,10 @@ class TestCaseGenerator {
                 return {
                     title: String(testCase.title),
                     type: testCase.type,
+                    priority: testCase.priority || 'Medium',
                     steps: testCase.steps.map((step) => String(step)),
-                    expected_result: String(testCase.expected_result)
+                    expected_result: String(testCase.expected_result),
+                    test_data: testCase.test_data ? String(testCase.test_data) : undefined
                 };
             });
         }

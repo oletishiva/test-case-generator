@@ -82,9 +82,11 @@ export class TestCaseGenerator {
 
         return {
           title: String(testCase.title),
-          type: testCase.type as 'Positive' | 'Negative',
+          type: testCase.type as 'Positive' | 'Negative' | 'Edge Case' | 'Security' | 'Performance',
+          priority: testCase.priority as 'High' | 'Medium' | 'Low' || 'Medium',
           steps: testCase.steps.map((step: any) => String(step)),
-          expected_result: String(testCase.expected_result)
+          expected_result: String(testCase.expected_result),
+          test_data: testCase.test_data ? String(testCase.test_data) : undefined
         };
       });
     } catch (error) {

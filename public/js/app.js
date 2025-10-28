@@ -126,7 +126,8 @@ class TestCaseGenerator {
             
             testCaseElement.innerHTML = `
                 <h3>
-                    <span class="type-badge ${testCase.type.toLowerCase()}">${testCase.type}</span>
+                    <span class="type-badge ${testCase.type.toLowerCase().replace(' ', '-')}">${testCase.type}</span>
+                    <span class="priority-badge priority-${testCase.priority?.toLowerCase() || 'medium'}">${testCase.priority || 'Medium'}</span>
                     ${testCase.title}
                 </h3>
                 <div class="steps">
@@ -139,6 +140,12 @@ class TestCaseGenerator {
                     <h4>Expected Result:</h4>
                     <p>${testCase.expected_result}</p>
                 </div>
+                ${testCase.test_data ? `
+                <div class="test-data">
+                    <h4>Test Data:</h4>
+                    <p>${testCase.test_data}</p>
+                </div>
+                ` : ''}
             `;
             
             this.testCasesOutput.appendChild(testCaseElement);

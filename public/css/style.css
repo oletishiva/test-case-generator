@@ -236,6 +236,45 @@ body {
     color: #e74c3c;
 }
 
+.test-case .type-badge.edge-case {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.test-case .type-badge.security {
+    background: #f5c6cb;
+    color: #721c24;
+}
+
+.test-case .type-badge.performance {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.priority-badge {
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+.priority-badge.priority-high {
+    background-color: #dc3545;
+    color: white;
+}
+
+.priority-badge.priority-medium {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.priority-badge.priority-low {
+    background-color: #6c757d;
+    color: white;
+}
+
 .test-case .steps {
     margin: 1rem 0;
 }
