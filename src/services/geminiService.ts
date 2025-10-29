@@ -9,38 +9,38 @@ export class GeminiService {
   constructor(config: GeminiConfig) {
     this.config = config;
     this.genAI = new GoogleGenerativeAI(config.apiKey);
-    this.model = this.genAI.getGenerativeModel({ 
-      model: config.model || 'gemini-2.5-flash',
-      generationConfig: {
-        maxOutputTokens: config.maxOutputTokens || 4000,
-        temperature: config.temperature || 0.3,
-      }
-    });
+        this.model = this.genAI.getGenerativeModel({
+          model: config.model || 'gemini-2.5-flash',
+          generationConfig: {
+            maxOutputTokens: config.maxOutputTokens || 20000,
+            temperature: config.temperature || 0.0,
+          }
+        });
   }
 
   async generateTestCases(requirement: string): Promise<string> {
-      const prompt = `Generate 6-8 test cases for: "${requirement}"
+      const prompt = `Generate 20 test cases for: "${requirement}"
 
-Return ONLY valid JSON array with:
-- title: test name (no special characters)
-- type: "Positive" or "Negative"  
-- priority: "High" or "Medium"
-- steps: array of 3-4 steps (escape quotes properly)
-- expected_result: outcome (escape quotes properly)
-- test_data: test data if needed
+Return JSON array with exactly 20 test cases. Each test case must have:
+- title: string
+- type: "Positive" or "Negative"
+- priority: "Critical", "High", "Medium", or "Low"
+- steps: array of strings
+- expected_result: string
+- test_data: string or null
 
-IMPORTANT: 
-- Use double quotes only
-- Escape all quotes in strings with backslash
-- No trailing commas
-- Valid JSON format only
+Format: [{"title":"Test name","type":"Positive","priority":"High","steps":["Step 1","Step 2"],"expected_result":"Result","test_data":"Data"}]
 
-Example: [{"title":"Test 1","type":"Positive","priority":"High","steps":["step1","step2"],"expected_result":"result1","test_data":"data1"}]`;
+Generate exactly 20 test cases. Return only JSON array.`;
 
     try {
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
+
+      console.log('🔍 Gemini Raw Response Length:', text.length);
+      console.log('🔍 Gemini Raw Response Preview:', text.substring(0, 500) + '...');
+      console.log('🔍 Gemini Raw Response End:', text.substring(text.length - 200));
 
       if (!text) {
         console.error('Gemini API Response Debug:', {

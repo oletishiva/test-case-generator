@@ -118,11 +118,14 @@ class TestCaseGeneratorApp {
                     playwrightCode = this.playwrightGenerator.generateBasicPlaywrightCode(testCaseResponse.testCases);
                 }
             }
+            else {
+                console.log('🎭 Skipping Playwright code generation (not requested)');
+            }
             // Save files
-            const savedFiles = await this.fileUtils.saveGeneratedTests(testCaseResponse.testCases, playwrightCode || '', 'cli_generated');
+            const savedFiles = await this.fileUtils.saveGeneratedTests(testCaseResponse.testCases, playwrightCode || undefined, 'cli_generated');
             console.log('💾 Files saved:');
             console.log(`   📄 Test Cases: ${savedFiles.testCasesPath}`);
-            if (playwrightCode) {
+            if (savedFiles.playwrightPath) {
                 console.log(`   🎭 Playwright: ${savedFiles.playwrightPath}`);
             }
             console.log('');

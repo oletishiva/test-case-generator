@@ -73,6 +73,10 @@ export class TestCaseGenerator {
 
   private parseTestCases(jsonString: string): TestCase[] {
     try {
+      console.log('🔍 Raw JSON response length:', jsonString.length);
+      console.log('🔍 Raw JSON preview:', jsonString.substring(0, 500) + '...');
+      console.log('🔍 Raw JSON end:', jsonString.substring(jsonString.length - 200));
+      
       // Clean the JSON string - remove any markdown formatting
       let cleanJson = jsonString.trim();
       
@@ -86,9 +90,18 @@ export class TestCaseGenerator {
       // Handle incomplete JSON by trying to fix common truncation issues
       if (!cleanJson.endsWith(']')) {
         // Try to complete the JSON if it looks truncated
-        const lastCompleteObject = cleanJson.lastIndexOf('},');
+        // Look for the last complete test case object
+        const lastCompleteObject = cleanJson.lastIndexOf('}');
         if (lastCompleteObject > 0) {
-          cleanJson = cleanJson.substring(0, lastCompleteObject + 1) + ']';
+          // Find the start of the last complete object
+          const lastObjectStart = cleanJson.lastIndexOf('{', lastCompleteObject);
+          if (lastObjectStart > 0) {
+            // Keep all complete objects and close the array
+            cleanJson = cleanJson.substring(0, lastCompleteObject + 1) + ']';
+          } else {
+            // If we can't find a complete object, try to close what we have
+            cleanJson = cleanJson + '}]';
+          }
         } else if (cleanJson.endsWith('"')) {
           // If it ends with a quote, try to close the current object
           cleanJson = cleanJson + '}]';
@@ -127,26 +140,20 @@ export class TestCaseGenerator {
         throw new Error('Response is not an array');
       }
 
-      // Validate each test case
+      // Process each test case with lenient validation
       return parsed.map((testCase, index) => {
-        if (!testCase.title || !testCase.type || !testCase.steps || !testCase.expected_result) {
-          throw new Error(`Invalid test case at index ${index}: missing required fields`);
-        }
-
-        if (!['Positive', 'Negative'].includes(testCase.type)) {
-          throw new Error(`Invalid test case type at index ${index}: must be 'Positive' or 'Negative'`);
-        }
-
-        if (!Array.isArray(testCase.steps)) {
-          throw new Error(`Invalid steps at index ${index}: must be an array`);
-        }
+        // Log any missing fields for debugging
+        if (!testCase.title) console.warn(`Test case ${index}: missing title`);
+        if (!testCase.type) console.warn(`Test case ${index}: missing type`);
+        if (!testCase.steps) console.warn(`Test case ${index}: missing steps`);
+        if (!testCase.expected_result) console.warn(`Test case ${index}: missing expected_result`);
 
         return {
-          title: String(testCase.title),
-          type: testCase.type as 'Positive' | 'Negative' | 'Edge Case' | 'Security' | 'Performance',
-          priority: testCase.priority as 'High' | 'Medium' | 'Low' || 'Medium',
-          steps: testCase.steps.map((step: any) => String(step)),
-          expected_result: String(testCase.expected_result),
+          title: String(testCase.title || 'Untitled Test Case'),
+          type: (testCase.type as 'Positive' | 'Negative') || 'Positive',
+          priority: (testCase.priority as 'Critical' | 'High' | 'Medium' | 'Low') || 'Medium',
+          steps: Array.isArray(testCase.steps) ? testCase.steps.map((step: any) => String(step)) : ['Step not specified'],
+          expected_result: String(testCase.expected_result || 'Expected result not specified'),
           test_data: testCase.test_data ? String(testCase.test_data) : undefined
         };
       });
@@ -156,4 +163,5 @@ export class TestCaseGenerator {
       throw new Error(`Failed to parse test cases: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
     }
   }
+
 }

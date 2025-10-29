@@ -23,14 +23,14 @@
                 <div class="card">
                     <h2><i class="fas fa-cog"></i> Configuration</h2>
                     <div class="form-group">
-                        <label for="openaiKey">OpenAI API Key <span class="required">*</span></label>
-                        <input type="password" id="openaiKey" placeholder="sk-..." />
-                        <small>Your OpenAI API key for GPT models (at least one API key is required)</small>
+                        <label for="openaiKey">OpenAI API Key <span class="optional">(Optional)</span></label>
+                        <input type="password" id="openaiKey" placeholder="sk-..." value="" />
+                        <small>Your OpenAI API key for GPT models (optional - server keys will be used if not provided)</small>
                     </div>
                     <div class="form-group">
-                        <label for="geminiKey">Gemini API Key <span class="required">*</span></label>
-                        <input type="password" id="geminiKey" placeholder="AI..." />
-                        <small>Your Google Gemini API key (at least one API key is required)</small>
+                        <label for="geminiKey">Gemini API Key <span class="optional">(Optional)</span></label>
+                        <input type="password" id="geminiKey" placeholder="AI..." value="" />
+                        <small>Your Google Gemini API key (optional - server keys will be used if not provided)</small>
                     </div>
                     <div class="form-group">
                         <label for="primaryService">Primary AI Service</label>
@@ -42,6 +42,19 @@
                     </div>
                 </div>
 
+                <!-- JIRA Integration Section -->
+                <div class="card jira-section">
+                    <h2><i class="fas fa-ticket-alt"></i> JIRA Integration (Optional)</h2>
+                    <div class="jira-input-group">
+                        <input type="text" id="jiraStoryId" placeholder="JIRA Story ID (e.g., PROJ-123)" class="form-input">
+                        <button id="fetchJiraStory" class="btn btn-secondary">Fetch Story</button>
+                    </div>
+                    <div id="jiraStoryPreview" class="jira-preview" style="display: none;">
+                        <h4>JIRA Story Preview:</h4>
+                        <div id="jiraStoryContent"></div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <h2><i class="fas fa-edit"></i> Test Requirements</h2>
                     <div class="form-group">
@@ -50,18 +63,59 @@
                         <small>Describe the functionality you want to test</small>
                     </div>
                     <div class="form-group">
-                        <label for="acceptanceCriteria">Acceptance Criteria (Optional)</label>
-                        <textarea id="acceptanceCriteria" placeholder="Given a user with valid credentials, when they enter their email and password, then they should be logged in successfully..." rows="3"></textarea>
+                        <label for="acceptanceCriteria">Acceptance Criteria</label>
+                        <div class="criteria-source">
+                            <label>
+                                <input type="radio" name="criteriaSource" value="manual" checked> Manual Entry
+                            </label>
+                            <label>
+                                <input type="radio" name="criteriaSource" value="jira"> From JIRA Story
+                            </label>
+                        </div>
+                        <textarea id="acceptanceCriteria" placeholder="Enter acceptance criteria manually or fetch from JIRA..." rows="3"></textarea>
                         <small>Additional acceptance criteria to consider</small>
                     </div>
                     <div class="form-group checkbox-group">
                         <label>
-                            <input type="checkbox" id="generatePlaywright" checked />
+                            <input type="checkbox" id="generatePlaywright" />
                             Generate Playwright Test Code
                         </label>
                     </div>
+                </div>
+
+                <!-- Test Pyramid Configuration -->
+                <div class="card test-pyramid-section">
+                    <h2><i class="fas fa-chart-bar"></i> Test Pyramid Distribution</h2>
+                    <div class="pyramid-config">
+                        <div class="pyramid-slider">
+                            <label>Unit Tests: <span id="unitPercent">70</span>%</label>
+                            <input type="range" id="unitTests" min="0" max="100" value="70" class="slider">
+                        </div>
+                        <div class="pyramid-slider">
+                            <label>Integration Tests: <span id="integrationPercent">20</span>%</label>
+                            <input type="range" id="integrationTests" min="0" max="100" value="20" class="slider">
+                        </div>
+                        <div class="pyramid-slider">
+                            <label>E2E Tests: <span id="e2ePercent">10</span>%</label>
+                            <input type="range" id="e2eTests" min="0" max="100" value="10" class="slider">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prioritization Rules -->
+                <div class="card prioritization-section">
+                    <h2><i class="fas fa-flag"></i> Test Prioritization Rules</h2>
+                    <div class="priority-rules">
+                        <label><input type="checkbox" id="criticalSecurity" checked> Critical: Security & Data Integrity</label>
+                        <label><input type="checkbox" id="highCore" checked> High: Core User Workflows</label>
+                        <label><input type="checkbox" id="mediumEdge" checked> Medium: Edge Cases & Error Handling</label>
+                        <label><input type="checkbox" id="lowUI" checked> Low: UI/UX & Nice-to-have</label>
+                    </div>
+                </div>
+
+                <div class="card">
                     <button id="generateBtn" class="btn btn-primary">
-                        <i class="fas fa-magic"></i> Generate Test Cases
+                        <i class="fas fa-magic"></i> Generate Enhanced Test Cases
                     </button>
                 </div>
             </div>

@@ -101,18 +101,20 @@ class TestCaseGeneratorApp {
           console.warn('⚠️  Failed to generate Playwright code with AI, using fallback generator');
           playwrightCode = this.playwrightGenerator.generateBasicPlaywrightCode(testCaseResponse.testCases);
         }
+      } else {
+        console.log('🎭 Skipping Playwright code generation (not requested)');
       }
 
       // Save files
       const savedFiles = await this.fileUtils.saveGeneratedTests(
         testCaseResponse.testCases,
-        playwrightCode || '',
+        playwrightCode || undefined,
         'cli_generated'
       );
 
       console.log('💾 Files saved:');
       console.log(`   📄 Test Cases: ${savedFiles.testCasesPath}`);
-      if (playwrightCode) {
+      if (savedFiles.playwrightPath) {
         console.log(`   🎭 Playwright: ${savedFiles.playwrightPath}`);
       }
 

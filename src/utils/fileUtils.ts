@@ -46,16 +46,26 @@ export class FileUtils {
     }
   }
 
-  async saveGeneratedTests(testCases: TestCase[], playwrightCode: string, baseFilename: string = 'generated'): Promise<{ testCasesPath: string; playwrightPath: string }> {
+  async saveGeneratedTests(testCases: TestCase[], playwrightCode: string | undefined, baseFilename: string = 'generated'): Promise<{ testCasesPath: string; playwrightPath?: string }> {
     try {
       // Generate timestamp for unique filenames
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       
       const testCasesFilename = `${baseFilename}_${timestamp}.json`;
-      const playwrightFilename = `${baseFilename}_${timestamp}.spec.ts`;
       
+      // Always save test cases
       const testCasesPath = await this.saveTestCases(testCases, testCasesFilename);
-      const playwrightPath = await this.savePlaywrightCode(playwrightCode, playwrightFilename);
+      
+      let playwrightPath: string | undefined;
+      
+      // Only save Playwright code if it exists and is not empty
+      if (playwrightCode && playwrightCode.trim().length > 0) {
+        const playwrightFilename = `${baseFilename}_${timestamp}.spec.ts`;
+        playwrightPath = await this.savePlaywrightCode(playwrightCode, playwrightFilename);
+        console.log(`🎭 Playwright code saved: ${playwrightPath}`);
+      } else {
+        console.log('🎭 No Playwright code generated - skipping file creation');
+      }
       
       return { testCasesPath, playwrightPath };
     } catch (error) {

@@ -10,5 +10,8 @@ export declare class AIRoutes {
     constructor(testCaseGenerator: TestCaseGenerator, playwrightGenerator: PlaywrightGenerator, fileUtils: FileUtils);
     private setupRoutes;
     getRouter(): Router;
+    private applyTestPyramid;
+    private applyPrioritizationRules;
+    private generateTraceabilityMatrix;
 }
 //# sourceMappingURL=aiRoutes.d.ts.map

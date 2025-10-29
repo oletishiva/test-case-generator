@@ -32,17 +32,59 @@ export class AIRoutes {
       });
     });
 
+    // JIRA integration endpoint
+    this.router.post('/jira/fetch', async (req: Request, res: Response) => {
+      try {
+        const { storyId } = req.body;
+
+        if (!storyId || typeof storyId !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: 'JIRA Story ID is required'
+          });
+        }
+
+        console.log(`🔍 Fetching JIRA story: ${storyId}`);
+
+        // For now, we'll simulate JIRA data
+        // In a real implementation, you'd integrate with JIRA API
+        const mockJiraStory = {
+          id: storyId,
+          title: `Sample JIRA Story: ${storyId}`,
+          status: 'In Progress',
+          priority: 'High',
+          description: 'This is a sample JIRA story description that would normally be fetched from the JIRA API.',
+          acceptanceCriteria: `Given a user wants to ${storyId.toLowerCase().replace('-', ' ')}\nWhen they perform the action\nThen they should see the expected result\n\nAdditional criteria:\n- The system should handle errors gracefully\n- Performance should be under 2 seconds\n- The UI should be responsive`
+        };
+
+        res.status(200).json({
+          success: true,
+          story: mockJiraStory
+        });
+
+      } catch (error) {
+        console.error('❌ Error fetching JIRA story:', error);
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch JIRA story'
+        });
+      }
+    });
+
     // Generate test cases endpoint
     this.router.post('/generate', async (req: Request, res: Response) => {
       try {
-        const { 
-          requirement, 
-          generatePlaywright = true, 
-          openaiKey, 
-          geminiKey, 
-          primaryService = 'gemini',
-          acceptanceCriteria 
-        } = req.body;
+            const { 
+              requirement, 
+              generatePlaywright = false, 
+              openaiKey, 
+              geminiKey, 
+              primaryService = 'gemini',
+              acceptanceCriteria,
+              testPyramid,
+              prioritizationRules,
+              jiraStoryId
+            } = req.body;
 
         if (!requirement || typeof requirement !== 'string') {
           return res.status(400).json({
@@ -51,12 +93,16 @@ export class AIRoutes {
           });
         }
 
-        if (!openaiKey && !geminiKey) {
-          return res.status(400).json({
-            success: false,
-            error: 'At least one API key (OpenAI or Gemini) is required'
-          });
-        }
+            // Use environment variables as fallback if no API keys provided
+            const finalOpenaiKey = openaiKey || process.env.OPENAI_API_KEY;
+            const finalGeminiKey = geminiKey || process.env.GEMINI_API_KEY;
+            
+            if (!finalOpenaiKey && !finalGeminiKey) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'At least one API key (OpenAI or Gemini) is required. Please provide API keys or configure server environment variables.'
+                });
+            }
 
         console.log(`🚀 API Request - Generating test cases for: "${requirement}"`);
 
@@ -65,20 +111,20 @@ export class AIRoutes {
         const { TestCaseGenerator } = require('../generators/testCaseGenerator');
         const { PlaywrightGenerator } = require('../generators/playwrightGenerator');
 
-        const aiConfig = {
-          primary: primaryService as 'openai' | 'gemini',
-          openai: openaiKey ? {
-            apiKey: openaiKey,
-            model: 'gpt-4o-mini',
-            maxTokens: 2000
-          } : undefined,
-      gemini: geminiKey ? {
-        apiKey: geminiKey,
-        model: 'gemini-2.5-flash',
-        maxOutputTokens: 4000,
-        temperature: 0.3
-      } : undefined
-        };
+            const aiConfig = {
+              primary: primaryService as 'openai' | 'gemini',
+              openai: finalOpenaiKey ? {
+                apiKey: finalOpenaiKey,
+                model: 'gpt-4o-mini',
+                maxTokens: 2000
+              } : undefined,
+              gemini: finalGeminiKey ? {
+                apiKey: finalGeminiKey,
+                model: 'gemini-2.5-flash',
+                maxOutputTokens: 20000,
+                temperature: 0.0
+              } : undefined
+            };
 
         const clientAIService = new HybridAIService(aiConfig);
         const clientTestCaseGenerator = new TestCaseGenerator(clientAIService);
@@ -125,13 +171,34 @@ export class AIRoutes {
         // Save files
         const savedFiles = await this.fileUtils.saveGeneratedTests(
           testCaseResponse.testCases,
-          playwrightCode || '',
+          playwrightCode || undefined,
           'api_generated'
         );
 
+        // Apply test pyramid distribution
+        const prioritizedTestCases = this.applyTestPyramid(
+          testCaseResponse.testCases,
+          testPyramid || { unit: 70, integration: 20, e2e: 10 }
+        );
+
+        // Apply prioritization rules
+        const finalTestCases = this.applyPrioritizationRules(
+          prioritizedTestCases,
+          prioritizationRules || { critical: true, high: true, medium: true, low: true }
+        );
+
+        // Generate traceability matrix
+        const traceabilityMatrix = this.generateTraceabilityMatrix(
+          fullRequirement,
+          finalTestCases
+        );
+
         const response: GenerationResponse = {
-          testCases: testCaseResponse.testCases,
+          testCases: finalTestCases,
           playwrightCode,
+          testPyramid: testPyramid || { unit: 70, integration: 20, e2e: 10 },
+          prioritizedTestCases: finalTestCases,
+          traceabilityMatrix,
           success: true
         };
 
@@ -139,7 +206,7 @@ export class AIRoutes {
           ...response,
           files: savedFiles,
           metadata: {
-            testCaseCount: testCaseResponse.testCases.length,
+            testCaseCount: finalTestCases.length,
             generatedAt: new Date().toISOString(),
             hasPlaywrightCode: !!playwrightCode
           }
@@ -227,5 +294,69 @@ export class AIRoutes {
 
   getRouter(): Router {
     return this.router;
+  }
+
+  private applyTestPyramid(testCases: any[], testPyramid: any): any[] {
+    const total = testCases.length;
+    const unitCount = Math.round((testPyramid.unit / 100) * total);
+    const integrationCount = Math.round((testPyramid.integration / 100) * total);
+    const e2eCount = total - unitCount - integrationCount;
+
+    let unitTests = testCases.slice(0, unitCount);
+    let integrationTests = testCases.slice(unitCount, unitCount + integrationCount);
+    let e2eTests = testCases.slice(unitCount + integrationCount);
+
+    // Add test type information
+    unitTests = unitTests.map(tc => ({ ...tc, testType: 'Unit' }));
+    integrationTests = integrationTests.map(tc => ({ ...tc, testType: 'Integration' }));
+    e2eTests = e2eTests.map(tc => ({ ...tc, testType: 'E2E' }));
+
+    return [...unitTests, ...integrationTests, ...e2eTests];
+  }
+
+  private applyPrioritizationRules(testCases: any[], rules: any): any[] {
+    return testCases.map(tc => {
+      let priority = 'Medium'; // Default priority
+
+      // Apply prioritization rules
+      if (rules.critical && (tc.title.toLowerCase().includes('security') || 
+        tc.title.toLowerCase().includes('data') || 
+        tc.title.toLowerCase().includes('critical'))) {
+        priority = 'Critical';
+      } else if (rules.high && (tc.title.toLowerCase().includes('login') || 
+        tc.title.toLowerCase().includes('user') || 
+        tc.title.toLowerCase().includes('core'))) {
+        priority = 'High';
+      } else if (rules.medium && (tc.title.toLowerCase().includes('edge') || 
+        tc.title.toLowerCase().includes('error') || 
+        tc.title.toLowerCase().includes('validation'))) {
+        priority = 'Medium';
+      } else if (rules.low && (tc.title.toLowerCase().includes('ui') || 
+        tc.title.toLowerCase().includes('display') || 
+        tc.title.toLowerCase().includes('cosmetic'))) {
+        priority = 'Low';
+      }
+
+      return { ...tc, priority };
+    });
+  }
+
+  private generateTraceabilityMatrix(requirement: string, testCases: any[]): any[] {
+    // Simple traceability matrix generation
+    // In a real implementation, this would be more sophisticated
+    const requirements = requirement.split('\n').filter(line => line.trim().length > 0);
+    
+    return requirements.map((req, index) => {
+      const relatedTestCases = testCases.filter(tc => 
+        tc.title.toLowerCase().includes(req.toLowerCase().substring(0, 10)) ||
+        tc.steps.some((step: string) => step.toLowerCase().includes(req.toLowerCase().substring(0, 10)))
+      );
+
+      return {
+        requirement: req.substring(0, 100) + (req.length > 100 ? '...' : ''),
+        testCases: relatedTestCases.map(tc => tc.title),
+        coverage: relatedTestCases.length > 0 ? 'Full' : 'Not Covered'
+      };
+    });
   }
 }

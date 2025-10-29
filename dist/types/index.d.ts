@@ -1,7 +1,7 @@
 export interface TestCase {
     title: string;
-    type: 'Positive' | 'Negative' | 'Edge Case' | 'Security' | 'Performance';
-    priority: 'High' | 'Medium' | 'Low';
+    type: 'Positive' | 'Negative';
+    priority: 'Critical' | 'High' | 'Medium' | 'Low';
     steps: string[];
     expected_result: string;
     test_data?: string;
@@ -15,6 +15,17 @@ export interface GenerationResponse {
     playwrightCode?: string;
     success: boolean;
     error?: string;
+    testPyramid?: {
+        unit: number;
+        integration: number;
+        e2e: number;
+    };
+    prioritizedTestCases?: TestCase[];
+    traceabilityMatrix?: Array<{
+        requirement: string;
+        testCases: string[];
+        coverage: string;
+    }>;
 }
 export interface OpenAIConfig {
     apiKey: string;

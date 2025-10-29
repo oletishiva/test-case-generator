@@ -5,9 +5,9 @@ export declare class FileUtils {
     private ensureOutputDirectory;
     saveTestCases(testCases: TestCase[], filename?: string): Promise<string>;
     savePlaywrightCode(code: string, filename?: string): Promise<string>;
-    saveGeneratedTests(testCases: TestCase[], playwrightCode: string, baseFilename?: string): Promise<{
+    saveGeneratedTests(testCases: TestCase[], playwrightCode: string | undefined, baseFilename?: string): Promise<{
         testCasesPath: string;
-        playwrightPath: string;
+        playwrightPath?: string;
     }>;
     readFile(filePath: string): Promise<string>;
     fileExists(filePath: string): Promise<boolean>;
