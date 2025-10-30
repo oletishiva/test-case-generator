@@ -2,6 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AIRoutes = void 0;
 const express_1 = require("express");
+const health_1 = require("./endpoints/health");
+const jira_1 = require("./endpoints/jira");
+const generate_1 = require("./endpoints/generate");
+const locators_1 = require("./endpoints/locators");
+const files_1 = require("./endpoints/files");
+const download_1 = require("./endpoints/download");
+const cleanup_1 = require("./endpoints/cleanup");
 class AIRoutes {
     constructor(testCaseGenerator, playwrightGenerator, fileUtils) {
         this.router = (0, express_1.Router)();
@@ -11,220 +18,19 @@ class AIRoutes {
         this.setupRoutes();
     }
     setupRoutes() {
-        // Health check endpoint
-        this.router.get('/health', (req, res) => {
-            res.json({
-                status: 'healthy',
-                timestamp: new Date().toISOString(),
-                service: 'Test Case Generator API'
-            });
-        });
-        // JIRA integration endpoint
-        this.router.post('/jira/fetch', async (req, res) => {
-            try {
-                const { storyId } = req.body;
-                if (!storyId || typeof storyId !== 'string') {
-                    return res.status(400).json({
-                        success: false,
-                        error: 'JIRA Story ID is required'
-                    });
-                }
-                console.log(`🔍 Fetching JIRA story: ${storyId}`);
-                // For now, we'll simulate JIRA data
-                // In a real implementation, you'd integrate with JIRA API
-                const mockJiraStory = {
-                    id: storyId,
-                    title: `Sample JIRA Story: ${storyId}`,
-                    status: 'In Progress',
-                    priority: 'High',
-                    description: 'This is a sample JIRA story description that would normally be fetched from the JIRA API.',
-                    acceptanceCriteria: `Given a user wants to ${storyId.toLowerCase().replace('-', ' ')}\nWhen they perform the action\nThen they should see the expected result\n\nAdditional criteria:\n- The system should handle errors gracefully\n- Performance should be under 2 seconds\n- The UI should be responsive`
-                };
-                res.status(200).json({
-                    success: true,
-                    story: mockJiraStory
-                });
-            }
-            catch (error) {
-                console.error('❌ Error fetching JIRA story:', error);
-                res.status(500).json({
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Failed to fetch JIRA story'
-                });
-            }
-        });
-        // Generate test cases endpoint
-        this.router.post('/generate', async (req, res) => {
-            try {
-                const { requirement, generatePlaywright = false, openaiKey, geminiKey, primaryService = 'gemini', acceptanceCriteria, testPyramid, prioritizationRules, jiraStoryId } = req.body;
-                if (!requirement || typeof requirement !== 'string') {
-                    return res.status(400).json({
-                        success: false,
-                        error: 'Requirement is required and must be a string'
-                    });
-                }
-                // Use environment variables as fallback if no API keys provided
-                const finalOpenaiKey = openaiKey || process.env.OPENAI_API_KEY;
-                const finalGeminiKey = geminiKey || process.env.GEMINI_API_KEY;
-                if (!finalOpenaiKey && !finalGeminiKey) {
-                    return res.status(400).json({
-                        success: false,
-                        error: 'At least one API key (OpenAI or Gemini) is required. Please provide API keys or configure server environment variables.'
-                    });
-                }
-                console.log(`🚀 API Request - Generating test cases for: "${requirement}"`);
-                // Create a new AI service instance with client-provided keys
-                const { HybridAIService } = require('../services/hybridAIService');
-                const { TestCaseGenerator } = require('../generators/testCaseGenerator');
-                const { PlaywrightGenerator } = require('../generators/playwrightGenerator');
-                const aiConfig = {
-                    primary: primaryService,
-                    openai: finalOpenaiKey ? {
-                        apiKey: finalOpenaiKey,
-                        model: 'gpt-4o-mini',
-                        maxTokens: 2000
-                    } : undefined,
-                    gemini: finalGeminiKey ? {
-                        apiKey: finalGeminiKey,
-                        model: 'gemini-2.5-flash',
-                        maxOutputTokens: 20000,
-                        temperature: 0.0
-                    } : undefined
-                };
-                const clientAIService = new HybridAIService(aiConfig);
-                const clientTestCaseGenerator = new TestCaseGenerator(clientAIService);
-                const clientPlaywrightGenerator = new PlaywrightGenerator(clientAIService);
-                // Combine requirement with acceptance criteria if provided
-                const fullRequirement = acceptanceCriteria
-                    ? `${requirement}\n\nAcceptance Criteria:\n${acceptanceCriteria}`
-                    : requirement;
-                let testCaseResponse;
-                let playwrightCode;
-                if (generatePlaywright) {
-                    // Use parallel processing for better performance
-                    console.log('🚀 Using parallel processing for test cases and Playwright code...');
-                    const [testCasesResult, playwrightResult] = await Promise.allSettled([
-                        clientTestCaseGenerator.generate({
-                            requirement: fullRequirement,
-                            generatePlaywright: false
-                        }),
-                        clientPlaywrightGenerator.generatePlaywrightCode(fullRequirement, [])
-                    ]);
-                    testCaseResponse = testCasesResult.status === 'fulfilled' ? testCasesResult.value : { testCases: [], success: false };
-                    playwrightCode = playwrightResult.status === 'fulfilled' ? playwrightResult.value : '';
-                    if (!testCaseResponse.success) {
-                        return res.status(500).json(testCaseResponse);
-                    }
-                }
-                else {
-                    // Generate only test cases
-                    testCaseResponse = await clientTestCaseGenerator.generate({
-                        requirement: fullRequirement,
-                        generatePlaywright: false
-                    });
-                    if (!testCaseResponse.success) {
-                        return res.status(500).json(testCaseResponse);
-                    }
-                }
-                // Save files
-                const savedFiles = await this.fileUtils.saveGeneratedTests(testCaseResponse.testCases, playwrightCode || undefined, 'api_generated');
-                // Apply test pyramid distribution
-                const prioritizedTestCases = this.applyTestPyramid(testCaseResponse.testCases, testPyramid || { unit: 70, integration: 20, e2e: 10 });
-                // Apply prioritization rules
-                const finalTestCases = this.applyPrioritizationRules(prioritizedTestCases, prioritizationRules || { critical: true, high: true, medium: true, low: true });
-                // Generate traceability matrix
-                const traceabilityMatrix = this.generateTraceabilityMatrix(fullRequirement, finalTestCases);
-                const response = {
-                    testCases: finalTestCases,
-                    playwrightCode,
-                    testPyramid: testPyramid || { unit: 70, integration: 20, e2e: 10 },
-                    prioritizedTestCases: finalTestCases,
-                    traceabilityMatrix,
-                    success: true
-                };
-                res.json({
-                    ...response,
-                    files: savedFiles,
-                    metadata: {
-                        testCaseCount: finalTestCases.length,
-                        generatedAt: new Date().toISOString(),
-                        hasPlaywrightCode: !!playwrightCode
-                    }
-                });
-            }
-            catch (error) {
-                console.error('❌ API Error:', error);
-                res.status(500).json({
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Internal server error'
-                });
-            }
-        });
-        // Get generated files endpoint
-        this.router.get('/files', (req, res) => {
-            try {
-                const files = this.fileUtils.listGeneratedFiles();
-                res.json({
-                    success: true,
-                    files: files.map(file => ({
-                        name: file,
-                        path: `/output/${file}`,
-                        type: file.endsWith('.json') ? 'test-cases' : 'playwright'
-                    }))
-                });
-            }
-            catch (error) {
-                console.error('❌ Error listing files:', error);
-                res.status(500).json({
-                    success: false,
-                    error: 'Failed to list files'
-                });
-            }
-        });
-        // Download specific file endpoint
-        this.router.get('/download/:filename', async (req, res) => {
-            try {
-                const { filename } = req.params;
-                const filePath = `${this.fileUtils.getOutputDirectory()}/${filename}`;
-                const exists = await this.fileUtils.fileExists(filePath);
-                if (!exists) {
-                    return res.status(404).json({
-                        success: false,
-                        error: 'File not found'
-                    });
-                }
-                const content = await this.fileUtils.readFile(filePath);
-                const contentType = filename.endsWith('.json') ? 'application/json' : 'text/typescript';
-                res.setHeader('Content-Type', contentType);
-                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-                res.send(content);
-            }
-            catch (error) {
-                console.error('❌ Error downloading file:', error);
-                res.status(500).json({
-                    success: false,
-                    error: 'Failed to download file'
-                });
-            }
-        });
-        // Cleanup old files endpoint
-        this.router.post('/cleanup', async (req, res) => {
-            try {
-                const { maxAgeHours = 24 } = req.body;
-                await this.fileUtils.cleanupOldFiles(maxAgeHours);
-                res.json({
-                    success: true,
-                    message: `Cleaned up files older than ${maxAgeHours} hours`
-                });
-            }
-            catch (error) {
-                console.error('❌ Error cleaning up files:', error);
-                res.status(500).json({
-                    success: false,
-                    error: 'Failed to cleanup files'
-                });
-            }
-        });
+        const ctx = {
+            router: this.router,
+            testCaseGenerator: this.testCaseGenerator,
+            playwrightGenerator: this.playwrightGenerator,
+            fileUtils: this.fileUtils,
+        };
+        (0, health_1.registerHealth)(ctx);
+        (0, jira_1.registerJira)(ctx);
+        (0, generate_1.registerGenerate)(ctx);
+        (0, locators_1.registerLocators)(ctx);
+        (0, files_1.registerFiles)(ctx);
+        (0, download_1.registerDownload)(ctx);
+        (0, cleanup_1.registerCleanup)(ctx);
     }
     getRouter() {
         return this.router;

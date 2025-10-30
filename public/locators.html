@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Locator Generator • AI Test Generator</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="container header-inner">
+            <a href="/" class="brand">AI Test Generator</a>
+            <nav class="nav">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/locators.html" class="nav-link active">Locators</a>
+                <a href="#" class="nav-link" id="openApiDocs">API</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero hero-compact">
+        <div class="container hero-inner">
+            <div class="hero-copy">
+                <h1>Generate Locators and Page Methods</h1>
+                <p>Upload a page source or screenshot; get semantic locators and suggested page object methods.</p>
+            </div>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Input</h2>
+                    <div class="form-group">
+                        <label>Choose Input Type</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="inputType" value="html" checked /> HTML Source</label>
+                            <label><input type="radio" name="inputType" value="screenshot" /> Screenshot</label>
+                            <label><input type="radio" name="inputType" value="url" /> URL (beta)</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="htmlInputGroup">
+                        <label for="pageSource">HTML Page Source</label>
+                        <textarea id="pageSource" rows="10" placeholder="Paste full HTML source here..."></textarea>
+                        <div class="hint">Tip: Use 'View Page Source' and copy the entire HTML.</div>
+                    </div>
+
+                    <div class="form-group" id="screenshotInputGroup" style="display:none;">
+                        <label for="screenshotFile">Upload Screenshot (PNG/JPG)</label>
+                        <input type="file" id="screenshotFile" accept="image/png,image/jpeg" />
+                        <div class="hint">Screenshots are analyzed to infer visible controls and labels.</div>
+                    </div>
+
+                    <div class="form-group" id="urlInputGroup" style="display:none;">
+                        <label for="pageUrl">Page URL</label>
+                        <input type="url" id="pageUrl" placeholder="https://example.com/login" />
+                        <div class="hint">Beta: The server may fetch and sanitize the page for analysis.</div>
+                    </div>
+
+                    <div class="grid-2 compact">
+                        <div class="form-group">
+                            <label for="framework">Target Framework</label>
+                            <select id="framework">
+                                <option value="playwright">Playwright (TS)</option>
+                                <option value="cypress">Cypress</option>
+                                <option value="selenium">Selenium (JS)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="locatorStrategy">Preferred Locator Strategy</label>
+                            <select id="locatorStrategy">
+                                <option value="role">getByRole</option>
+                                <option value="label">getByLabel</option>
+                                <option value="placeholder">getByPlaceholder</option>
+                                <option value="text">getByText</option>
+                                <option value="css">CSS</option>
+                                <option value="xpath">XPath (fallback)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label><input type="checkbox" id="groupIntoPOM" checked /> Group into Page Object (class)</label>
+                    </div>
+
+                    <div class="actions">
+                        <button id="generateLocators" class="btn btn-primary">Generate Locators</button>
+                        <button id="clearInputs" class="btn btn-secondary">Clear</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Results</h2>
+                    <div id="locatorsSummary" class="summary"></div>
+
+                    <div id="locatorsTableWrapper" class="table-responsive" style="display:none;">
+                        <table class="test-cases-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Element</th>
+                                    <th>Role/Type</th>
+                                    <th>Locator</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locatorsTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="code-block" id="pomCodeBlock" style="display:none;">
+                        <div class="code-block-header">
+                            <span>Generated Page Object</span>
+                            <div>
+                                <button id="copyCode" class="btn btn-small">Copy</button>
+                                <button id="downloadCode" class="btn btn-small">Download</button>
+                            </div>
+                        </div>
+                        <pre><code id="pomCode"></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/locators.js"></script>
+</body>
+</html>
+
+

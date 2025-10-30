@@ -48,3 +48,22 @@ export interface AIServiceConfig {
   openai?: OpenAIConfig;
   gemini?: GeminiConfig;
 }
+
+// ===== Locator generation types =====
+export interface LocatorRequest {
+  inputType: 'html' | 'screenshot' | 'url' | 'description';
+  content: string; // html, url, or description; for screenshot this can be a description or base64 handled upstream
+  preferredStrategy?: 'role' | 'text' | 'label' | 'placeholder' | 'alt' | 'title' | 'testid' | 'css';
+  framework?: 'playwright' | 'cypress' | 'selenium';
+  groupIntoPOM?: boolean;
+}
+
+export interface LocatorResponse {
+  success: boolean;
+  code?: string; // Generated TypeScript Page Object
+  error?: string;
+  metadata?: {
+    strategyOrder: string[];
+    framework: string;
+  };
+}

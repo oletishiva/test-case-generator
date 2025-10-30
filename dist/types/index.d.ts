@@ -43,4 +43,20 @@ export interface AIServiceConfig {
     openai?: OpenAIConfig;
     gemini?: GeminiConfig;
 }
+export interface LocatorRequest {
+    inputType: 'html' | 'screenshot' | 'url' | 'description';
+    content: string;
+    preferredStrategy?: 'role' | 'text' | 'label' | 'placeholder' | 'alt' | 'title' | 'testid' | 'css';
+    framework?: 'playwright' | 'cypress' | 'selenium';
+    groupIntoPOM?: boolean;
+}
+export interface LocatorResponse {
+    success: boolean;
+    code?: string;
+    error?: string;
+    metadata?: {
+        strategyOrder: string[];
+        framework: string;
+    };
+}
 //# sourceMappingURL=index.d.ts.map
