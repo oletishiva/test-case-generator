@@ -13,6 +13,8 @@
   const frameworkEl = document.getElementById('framework');
   const locatorStrategyEl = document.getElementById('locatorStrategy');
   const groupIntoPOMEl = document.getElementById('groupIntoPOM');
+  const geminiKeyEl = document.getElementById('geminiKey');
+  const openaiKeyEl = document.getElementById('openaiKey');
 
   const summaryEl = document.getElementById('locatorsSummary');
   const tableWrapperEl = document.getElementById('locatorsTableWrapper');
@@ -74,9 +76,9 @@
           .replace('alttext','alt').replace('title','title').replace('testid','testid'),
         framework: frameworkEl.value,
         groupIntoPOM: groupIntoPOMEl.checked,
-        // pass keys if user has them saved (optional)
-        openaiKey: cfg.openaiKey || undefined,
-        geminiKey: cfg.geminiKey || undefined
+        // pass keys if entered here, else fallback to saved config (optional)
+        openaiKey: (openaiKeyEl && openaiKeyEl.value.trim()) || cfg.openaiKey || undefined,
+        geminiKey: (geminiKeyEl && geminiKeyEl.value.trim()) || cfg.geminiKey || undefined
       };
 
       const resp = await fetch('/api/locators/generate', {

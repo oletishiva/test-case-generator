@@ -85,6 +85,19 @@
                         </div>
                     </div>
 
+                    <div class="grid-2 compact">
+                        <div class="form-group">
+                            <label for="geminiKey">Gemini API Key <span class="optional">(Optional)</span></label>
+                            <input type="password" id="geminiKey" placeholder="AIza..." value="" />
+                            <small>If empty, server-side key must be configured.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="openaiKey">OpenAI API Key <span class="optional">(Optional)</span></label>
+                            <input type="password" id="openaiKey" placeholder="sk-..." value="" />
+                            <small>Fallback provider (if supported on server).</small>
+                        </div>
+                    </div>
+
                     <div class="form-group checkbox-group">
                         <label><input type="checkbox" id="groupIntoPOM" checked /> Group into Page Object (class)</label>
                     </div>
