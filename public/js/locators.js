@@ -86,7 +86,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-      const data = await resp.json().catch(() => ({ success: false, error: 'Invalid server response' }));
+      const raw = await resp.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch { data = { success: false, error: `Invalid server response${raw ? `: ${raw.slice(0, 280)}` : ''}` }; }
       if (!data.success) throw new Error(data.error || 'Failed to generate locators');
       return { rows: [], code: data.code };
     } catch (e) {
