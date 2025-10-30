@@ -13,6 +13,34 @@ export function registerLocators({ router }: RouteContext): void {
         return res.status(400).json({ success: false, error: 'At least one API key is required (OpenAI or Gemini) via body or env' });
       }
       const { LocatorService } = require('../../services/locatorService');
+
+      // If input is a URL, fetch server-side and replace content with fetched HTML
+      let finalInput: string = content;
+      if (inputType === 'url') {
+        try {
+          // Basic URL validation
+          const url = new URL(content);
+          const resp = await fetch(url.toString(), {
+            method: 'GET',
+            redirect: 'follow',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.1 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+          } as any);
+          if (!resp.ok) {
+            return res.status(400).json({ success: false, error: `Failed to fetch URL (${resp.status})` });
+          }
+          let html = await resp.text();
+          // Guard extremely large pages
+          const MAX_LEN = 400_000; // ~400 KB
+          if (html.length > MAX_LEN) html = html.slice(0, MAX_LEN);
+          finalInput = html;
+        } catch (err: any) {
+          return res.status(400).json({ success: false, error: `Unable to fetch provided URL: ${err?.message || String(err)}` });
+        }
+      }
+
       const generateFn = async (prompt: string): Promise<string> => {
         if (!finalGeminiKey) throw new Error('No LLM provider configured');
 
@@ -47,7 +75,7 @@ export function registerLocators({ router }: RouteContext): void {
         throw new Error('Service temporarily unavailable. Please try again in a minute.');
       };
       const service = new LocatorService(generateFn);
-      const code = await service.generate(content, { preferredStrategy, framework, groupIntoPOM });
+      const code = await service.generate(finalInput, { preferredStrategy, framework, groupIntoPOM });
       return res.json({ success: true, code, metadata: { strategyOrder: [], framework } });
     } catch (error) {
       console.error('❌ Locator API Error:', error);
