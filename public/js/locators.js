@@ -65,8 +65,6 @@
         throw new Error('Please provide HTML source, URL, or screenshot (description)');
       }
 
-      const cfg = getSavedConfig();
-
       const body = {
         inputType: val,
         content,
@@ -76,9 +74,9 @@
           .replace('alttext','alt').replace('title','title').replace('testid','testid'),
         framework: frameworkEl.value,
         groupIntoPOM: groupIntoPOMEl.checked,
-        // pass keys if entered here, else fallback to saved config (optional)
-        openaiKey: (openaiKeyEl && openaiKeyEl.value.trim()) || cfg.openaiKey || undefined,
-        geminiKey: (geminiKeyEl && geminiKeyEl.value.trim()) || cfg.geminiKey || undefined
+        // API keys are never stored - only pass what user enters in the form
+        openaiKey: (openaiKeyEl && openaiKeyEl.value.trim()) || undefined,
+        geminiKey: (geminiKeyEl && geminiKeyEl.value.trim()) || undefined
       };
 
       const resp = await fetch('/api/locators/generate', {
