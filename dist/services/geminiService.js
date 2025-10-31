@@ -15,35 +15,82 @@ class GeminiService {
         });
     }
     async generateTestCases(requirement) {
-        const prompt = `Generate 20 test cases for: "${requirement}"
+        const prompt = `You are a QA expert. Generate exactly 20 comprehensive functional test cases based on the following requirement and acceptance criteria.
 
-Return JSON array with exactly 20 test cases. Each test case must have:
-- title: string
-- type: "Positive" or "Negative"
-- priority: "Critical", "High", "Medium", or "Low"
-- steps: array of strings
-- expected_result: string
-- test_data: string or null
+REQUIREMENT:
+${requirement}
 
-Format: [{"title":"Test name","type":"Positive","priority":"High","steps":["Step 1","Step 2"],"expected_result":"Result","test_data":"Data"}]
+INSTRUCTIONS:
+- Generate exactly 20 test cases covering all acceptance criteria mentioned above
+- Include positive tests (happy path) and negative tests (error scenarios, edge cases, validations)
+- Prioritize based on business impact: Critical for core flows, High for important validations, Medium for edge cases, Low for UI/cosmetic checks
+- Each test case must be detailed and specific to the requirement
+- Return ONLY a valid JSON array, no markdown, no explanations
 
-Generate exactly 20 test cases. Return only JSON array.`;
+REQUIRED JSON FORMAT:
+[
+  {
+    "title": "Test case title describing the scenario",
+    "type": "Positive" or "Negative",
+    "priority": "Critical" or "High" or "Medium" or "Low",
+    "steps": ["Step 1", "Step 2", "Step 3"],
+    "expected_result": "Clear expected outcome",
+    "test_data": "Test data values or null"
+  }
+]
+
+Return exactly 20 test cases as a JSON array. Start with [ and end with ]. Do not include any text before or after the JSON array.`;
         try {
             const result = await this.model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+            const response = result.response;
+            // Check for candidates first
+            const candidates = response.candidates;
+            if (!candidates || candidates.length === 0) {
+                console.error('Gemini API Response Debug - No candidates:', {
+                    response: response,
+                    promptFinishReason: response.promptFeedback,
+                    safetyRatings: response.candidates?.[0]?.safetyRatings
+                });
+                throw new Error('No response candidates received from Gemini. This may be due to safety filters or content policy.');
+            }
+            // Check for finish reason
+            const finishReason = candidates[0]?.finishReason;
+            if (finishReason === 'SAFETY') {
+                throw new Error('Gemini blocked the response due to safety filters. Please try a different prompt.');
+            }
+            if (finishReason === 'RECITATION') {
+                throw new Error('Gemini blocked the response due to recitation policy. Please rephrase your requirement.');
+            }
+            let text;
+            try {
+                text = response.text();
+            }
+            catch (textError) {
+                // If text() fails, try accessing content directly
+                const content = candidates[0]?.content;
+                if (content?.parts && content.parts.length > 0) {
+                    text = content.parts.map((part) => part.text || '').join('');
+                }
+                else {
+                    console.error('Gemini API Response Debug - Cannot extract text:', {
+                        candidates,
+                        finishReason,
+                        textError
+                    });
+                    throw new Error('No text content in Gemini response. Finish reason: ' + (finishReason || 'UNKNOWN'));
+                }
+            }
+            if (!text || text.trim().length === 0) {
+                console.error('Gemini API Response Debug - Empty text:', {
+                    candidates,
+                    finishReason,
+                    textLength: text?.length
+                });
+                throw new Error('Received empty response from Gemini. Finish reason: ' + (finishReason || 'UNKNOWN'));
+            }
             console.log('🔍 Gemini Raw Response Length:', text.length);
             console.log('🔍 Gemini Raw Response Preview:', text.substring(0, 500) + '...');
             console.log('🔍 Gemini Raw Response End:', text.substring(text.length - 200));
-            if (!text) {
-                console.error('Gemini API Response Debug:', {
-                    result: result,
-                    response: response,
-                    text: text,
-                    candidates: result.response.candidates
-                });
-                throw new Error('No response content received from Gemini');
-            }
             return text.trim();
         }
         catch (error) {
