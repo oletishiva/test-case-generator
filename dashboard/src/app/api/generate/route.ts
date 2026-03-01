@@ -30,7 +30,7 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
 
 async function generateWithGemini(prompt: string): Promise<string> {
   const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
-  const model = geminiAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-04-17" });
+  const model = geminiAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
