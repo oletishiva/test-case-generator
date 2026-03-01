@@ -3,13 +3,12 @@ import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+export const dynamic = "force-dynamic";
 
 type Provider = "anthropic" | "openai" | "gemini";
 
 async function generateWithAnthropic(prompt: string): Promise<string> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
@@ -20,6 +19,7 @@ async function generateWithAnthropic(prompt: string): Promise<string> {
 }
 
 async function generateWithOpenAI(prompt: string): Promise<string> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     max_tokens: 2048,
@@ -29,6 +29,7 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
 }
 
 async function generateWithGemini(prompt: string): Promise<string> {
+  const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
   const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const result = await model.generateContent(prompt);
   return result.response.text();
