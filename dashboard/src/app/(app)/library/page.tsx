@@ -185,7 +185,7 @@ export default function LibraryPage() {
   useEffect(() => {
     if (!user) return;
     async function load() {
-      const { data } = await supabase
+      const { data } = await supabase()
         .from("test_cases")
         .select("*")
         .eq("user_id", user!.id)

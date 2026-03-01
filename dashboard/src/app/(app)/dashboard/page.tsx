@@ -41,20 +41,20 @@ export default function DashboardPage() {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
       // Real total count (not capped by limit)
-      const { count: totalCount } = await supabase
+      const { count: totalCount } = await supabase()
         .from("test_cases")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user!.id);
 
       // This week's count
-      const { count: weekCount } = await supabase
+      const { count: weekCount } = await supabase()
         .from("test_cases")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user!.id)
         .gte("created_at", weekAgo);
 
       // Recent 5 for activity list
-      const { data } = await supabase
+      const { data } = await supabase()
         .from("test_cases")
         .select("id, title, framework, test_type, created_at")
         .eq("user_id", user!.id)
