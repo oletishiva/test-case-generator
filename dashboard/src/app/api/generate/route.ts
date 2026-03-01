@@ -30,7 +30,7 @@ async function generateWithOpenAI(prompt: string): Promise<string> {
 
 async function generateWithGemini(prompt: string): Promise<string> {
   const geminiAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
-  const model = geminiAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = geminiAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
@@ -44,6 +44,8 @@ const providers: { name: Provider; fn: (p: string) => Promise<string> }[] = [
 export async function POST(req: NextRequest) {
   const { prompt } = await req.json();
 
+  const errors: Record<string, string> = {};
+
   for (const { name, fn } of providers) {
     try {
       const result = await fn(prompt);
@@ -51,12 +53,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result, provider: name });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      errors[name] = msg;
       console.warn(`✗ ${name} failed: ${msg} — trying next provider...`);
     }
   }
 
   return NextResponse.json(
-    { error: "All AI providers failed. Please try again later." },
+    { error: "All AI providers failed. Please try again later.", details: errors },
     { status: 500 }
   );
 }
