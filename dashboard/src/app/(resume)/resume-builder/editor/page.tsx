@@ -19,6 +19,7 @@ import UsageBanner from "@/components/resume/UsageBanner";
 // Lazy-load templates
 const ClassicWhite   = dynamic(() => import("@/components/resume/templates/ClassicWhite"),   { ssr: false });
 const TwoColumnClean = dynamic(() => import("@/components/resume/templates/TwoColumnClean"), { ssr: false });
+const NavyPro        = dynamic(() => import("@/components/resume/templates/NavyPro"),        { ssr: false });
 const EditorialBloom = dynamic(() => import("@/components/resume/templates/EditorialBloom"), { ssr: false });
 const MintFresh      = dynamic(() => import("@/components/resume/templates/MintFresh"),      { ssr: false });
 const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false });
@@ -26,6 +27,7 @@ const ObsidianGold   = dynamic(() => import("@/components/resume/templates/Obsid
 const TEMPLATES = [
   { id: "classic-white",    name: "Classic White",   accent: "#2563eb", bg: "#ffffff" },
   { id: "two-column-clean", name: "Two Column",      accent: "#2563eb", bg: "#ffffff" },
+  { id: "navy-pro",         name: "Navy Pro",        accent: "#3b6cb7", bg: "#1e2d4a" },
   { id: "editorial-bloom",  name: "Editorial Bloom", accent: "#FF6B9D", bg: "#faf8f4" },
   { id: "mint-fresh",       name: "Mint Fresh",      accent: "#4CAF7D", bg: "#f6fef9" },
   { id: "obsidian-gold",    name: "Obsidian Gold",   accent: "#C9A84C", bg: "#0e0e16" },
@@ -34,6 +36,7 @@ const TEMPLATES = [
 const TEMPLATE_MAP: Record<string, React.ComponentType<{ data: ResumeData }>> = {
   "classic-white":    ClassicWhite,
   "two-column-clean": TwoColumnClean,
+  "navy-pro":         NavyPro,
   "editorial-bloom":  EditorialBloom,
   "mint-fresh":       MintFresh,
   "obsidian-gold":    ObsidianGold,

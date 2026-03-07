@@ -7,7 +7,7 @@ import {
   Upload, FileText, CheckCircle2, ChevronDown, ChevronUp,
   ArrowRight, Sparkles, AlertCircle, X, Plus, Trash2,
 } from "lucide-react";
-import type { ResumeData, Experience, Skill } from "@/types/resume";
+import type { ResumeData } from "@/types/resume";
 import { SAMPLE_RESUME } from "@/lib/resume/parser";
 import UsageBanner from "@/components/resume/UsageBanner";
 
@@ -281,12 +281,32 @@ export default function UploadPage() {
                 />
               )}
 
-              {/* Target role input */}
-              <div className="mb-6">
+              {/* Target role + JD inputs */}
+              <div className="mb-4">
                 <label className="mb-1 block text-xs text-slate-400">Target Role (for AI enhancement)</label>
                 <input type="text" value={targetRole} onChange={e => setTargetRole(e.target.value)}
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-yellow-500/50 focus:outline-none"
                   placeholder="e.g. Senior QA Engineer, SDET, QA Lead" />
+              </div>
+
+              {/* JD field — optional, boosts ATS matching */}
+              <div className="mb-6 rounded-xl border p-4" style={{ borderColor: "#C9A84C33", background: "#0f0f1a" }}>
+                <div className="mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-yellow-400" />
+                  <label className="text-sm font-semibold text-white">Job Description</label>
+                  <span className="ml-auto rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-[10px] text-yellow-400 font-semibold">OPTIONAL</span>
+                </div>
+                <p className="mb-2 text-xs text-slate-400">
+                  Paste the JD to get a resume <strong className="text-yellow-300">tailored for this specific role</strong> — AI matches keywords, skills, and phrasing for maximum ATS score.
+                </p>
+                <textarea rows={4} value={jobDesc} onChange={e => setJobDesc(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-yellow-500/40 focus:outline-none resize-none" />
+                {jobDesc.trim() && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-green-400">
+                    <CheckCircle2 className="h-3 w-3" /> JD added — AI will optimise your resume for this specific role
+                  </p>
+                )}
               </div>
 
               {parseError && (

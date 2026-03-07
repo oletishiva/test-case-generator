@@ -14,16 +14,18 @@ import type { ResumeData } from "@/types/resume";
 /* ── Lazy-load templates ────────────────────────────────────── */
 const ClassicWhite   = dynamic(() => import("@/components/resume/templates/ClassicWhite"),   { ssr: false, loading: () => <TemplateSkeleton bg="#ffffff" /> });
 const TwoColumnClean = dynamic(() => import("@/components/resume/templates/TwoColumnClean"), { ssr: false, loading: () => <TemplateSkeleton bg="#ffffff" /> });
+const NavyPro        = dynamic(() => import("@/components/resume/templates/NavyPro"),        { ssr: false, loading: () => <TemplateSkeleton bg="#1e2d4a" /> });
 const EditorialBloom = dynamic(() => import("@/components/resume/templates/EditorialBloom"), { ssr: false, loading: () => <TemplateSkeleton bg="#faf8f4" /> });
 const MintFresh      = dynamic(() => import("@/components/resume/templates/MintFresh"),      { ssr: false, loading: () => <TemplateSkeleton bg="#f6fef9" /> });
 const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false, loading: () => <TemplateSkeleton bg="#0e0e16" /> });
 
 const TEMPLATES: { id: string; name: string; role: string; accent: string; Component: React.ComponentType<{ data: ResumeData }> }[] = [
-  { id: "classic-white",    name: "Classic White",    role: "All QA Roles · ATS Optimised",  accent: "#2563eb", Component: ClassicWhite },
-  { id: "two-column-clean", name: "Two Column",       role: "Senior QA / QA Lead",           accent: "#2563eb", Component: TwoColumnClean },
-  { id: "editorial-bloom",  name: "Editorial Bloom",  role: "QA Lead / People Manager",      accent: "#FF6B9D", Component: EditorialBloom },
-  { id: "mint-fresh",       name: "Mint Fresh",       role: "API / Backend QA Engineer",     accent: "#4CAF7D", Component: MintFresh },
-  { id: "obsidian-gold",    name: "Obsidian Gold",    role: "QA Architect / Senior Lead",    accent: "#C9A84C", Component: ObsidianGold },
+  { id: "classic-white",    name: "Classic White",    role: "All QA Roles · ATS Optimised",   accent: "#2563eb", Component: ClassicWhite },
+  { id: "two-column-clean", name: "Two Column",       role: "Senior QA / QA Lead",            accent: "#2563eb", Component: TwoColumnClean },
+  { id: "navy-pro",         name: "Navy Pro",         role: "Test Architect / QA Leader",     accent: "#3b6cb7", Component: NavyPro },
+  { id: "editorial-bloom",  name: "Editorial Bloom",  role: "QA Lead / People Manager",       accent: "#FF6B9D", Component: EditorialBloom },
+  { id: "mint-fresh",       name: "Mint Fresh",       role: "API / Backend QA Engineer",      accent: "#4CAF7D", Component: MintFresh },
+  { id: "obsidian-gold",    name: "Obsidian Gold",    role: "QA Architect / Senior Lead",     accent: "#C9A84C", Component: ObsidianGold },
 ];
 
 /* ── Skeleton ──────────────────────────────────────────────── */
