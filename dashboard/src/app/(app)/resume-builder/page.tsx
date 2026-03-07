@@ -65,54 +65,135 @@ const steps = [
   },
 ];
 
-/* ── Template preview card ────────────────────────────────── */
-function TemplateCard({ template, index }: { template: typeof RESUME_TEMPLATES[0]; index: number }) {
-  const themeColors: Record<string, string> = {
-    dark: "#1a1a2e",
-    light: "#f8f9fa",
-    colorful: "#fff7ed",
+/* ── Shared resume mock (works for both mini + zoomed) ───── */
+function ResumeMock({ t, s = 1 }: { t: typeof RESUME_TEMPLATES[0]; s?: number }) {
+  const isLight = t.theme === "light";
+  const bgMap: Record<string, string> = {
+    "mint-fresh": "#f6fef9", "editorial-bloom": "#faf8f4",
+    "aurora-soft": "#f8f5ff", "desi-bold": "#fff7ed",
   };
+  const bg = bgMap[t.id] ?? (isLight ? "#f8f9fa" : t.id === "neon-circuit" ? "#050510" : t.id === "steel-pro" ? "#111827" : "#0e0e16");
+  const line = isLight ? "#00000020" : "#ffffff20";
+  const lineMed = isLight ? "#00000035" : "#ffffff35";
+  const ac = t.accentColor;
+  const txtColor = isLight ? "#111" : "#fff";
+
   return (
-    <motion.div
-      whileHover={{ scale: 1.05, y: -4 }}
-      className="relative shrink-0 w-40 h-56 rounded-xl overflow-hidden cursor-pointer border border-white/10"
-      style={{ background: themeColors[template.theme] ?? "#1a1a2e" }}
-    >
-      {/* Mock resume lines */}
-      <div className="p-3 h-full flex flex-col gap-1.5">
-        <div className="h-3 rounded-full w-3/4" style={{ background: template.accentColor, opacity: 0.9 }} />
-        <div className="h-1.5 rounded-full w-1/2 bg-white/20" />
-        <div className="h-px w-full mt-1" style={{ background: template.accentColor, opacity: 0.4 }} />
-        {[80, 60, 90, 50, 70].map((w, i) => (
-          <div key={i} className="h-1 rounded-full bg-white/15" style={{ width: `${w}%` }} />
-        ))}
-        <div className="mt-1 h-1.5 rounded-full w-2/3 bg-white/20" />
-        {[55, 75, 40, 65].map((w, i) => (
-          <div key={i} className="h-1 rounded-full bg-white/10" style={{ width: `${w}%` }} />
-        ))}
+    <div style={{ width: 160 * s, height: 228 * s, background: bg, overflow: "hidden", position: "relative", flexShrink: 0 }}>
+      {/* Top accent bar */}
+      <div style={{ height: 3 * s, background: `linear-gradient(90deg,${ac},${ac}88)` }} />
+
+      {/* Header */}
+      <div style={{ padding: `${10 * s}px ${12 * s}px ${7 * s}px`, borderBottom: `1px solid ${ac}33` }}>
+        <div style={{ height: 9 * s, width: "68%", borderRadius: 3 * s, background: ac, marginBottom: 4 * s }} />
+        <div style={{ height: 5 * s, width: "46%", borderRadius: 2 * s, background: lineMed, marginBottom: 5 * s }} />
+        <div style={{ display: "flex", gap: 4 * s }}>
+          {[28, 22, 26].map((w, i) => <div key={i} style={{ height: 3 * s, width: `${w}%`, borderRadius: 2 * s, background: line }} />)}
+        </div>
       </div>
 
-      {/* Accent dot */}
-      <div className="absolute top-2 right-2 h-2 w-2 rounded-full" style={{ background: template.accentColor }} />
+      {/* Body */}
+      <div style={{ display: "flex", flex: 1 }}>
+        {/* Main */}
+        <div style={{ flex: 1, padding: `${7 * s}px ${8 * s}px` }}>
+          <div style={{ height: 4 * s, width: "38%", borderRadius: 2 * s, background: ac, opacity: 0.8, marginBottom: 5 * s }} />
+          {[75, 55, 85, 48, 68, 58].map((w, i) => (
+            <div key={i} style={{ height: 3 * s, width: `${w}%`, borderRadius: 2 * s, background: line, marginBottom: 3 * s }} />
+          ))}
+          <div style={{ height: 4 * s, width: "34%", borderRadius: 2 * s, background: ac, opacity: 0.8, margin: `${6 * s}px 0 ${5 * s}px` }} />
+          {[62, 78, 50, 70].map((w, i) => (
+            <div key={i} style={{ height: 3 * s, width: `${w}%`, borderRadius: 2 * s, background: line, marginBottom: 3 * s }} />
+          ))}
+        </div>
+
+        {/* Sidebar — dark templates only */}
+        {!isLight && (
+          <div style={{ width: 44 * s, background: `${ac}0c`, borderLeft: `1px solid ${ac}22`, padding: `${7 * s}px ${5 * s}px` }}>
+            <div style={{ height: 3 * s, width: "80%", borderRadius: 2 * s, background: ac, opacity: 0.7, marginBottom: 5 * s }} />
+            {[90, 70, 82, 60, 75].map((w, i) => (
+              <div key={i} style={{ height: 3 * s, width: `${w}%`, borderRadius: 2 * s, background: line, marginBottom: 3 * s }} />
+            ))}
+            <div style={{ marginTop: 6 * s }}>
+              {[100, 80, 60, 90].map((w, i) => (
+                <div key={i} style={{ height: 2 * s, width: "90%", borderRadius: 2 * s, background: "#ffffff0a", marginBottom: 4 * s, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${w}%`, background: ac, opacity: 0.75 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer label */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0,
+        padding: `${4 * s}px ${8 * s}px`,
+        background: isLight ? "rgba(255,255,255,0.88)" : "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(4px)",
+        borderTop: `1px solid ${ac}44`,
+      }}>
+        <p style={{ fontSize: 7 * s, fontWeight: 700, color: txtColor, margin: 0 }}>{t.name}</p>
+        <p style={{ fontSize: 6 * s, color: ac, margin: 0 }}>{t.targetRole}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Template preview card ────────────────────────────────── */
+function TemplateCard({ template, index }: { template: typeof RESUME_TEMPLATES[0]; index: number }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Mini card */}
+      <motion.div
+        animate={{ y: hovered ? -6 : 0, scale: hovered ? 1.04 : 1 }}
+        transition={{ duration: 0.18 }}
+        style={{
+          cursor: "pointer",
+          borderRadius: 12,
+          overflow: "hidden",
+          border: `2px solid ${hovered ? template.accentColor : "#ffffff18"}`,
+          boxShadow: hovered ? `0 8px 32px ${template.accentColor}55` : "0 2px 10px rgba(0,0,0,0.35)",
+        }}
+      >
+        <ResumeMock t={template} s={1} />
+      </motion.div>
 
       {/* Badges */}
       {index === 0 && (
-        <div className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-black"
-          style={{ background: "#C9A84C" }}>Popular</div>
+        <div style={{ position: "absolute", top: 8, left: 8, background: "#C9A84C", color: "#000", fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "2px 6px", pointerEvents: "none", zIndex: 2 }}>Popular</div>
       )}
       {index === 1 && (
-        <div className="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-black"
-          style={{ background: "#FF4D6D" }}>New</div>
+        <div style={{ position: "absolute", top: 8, left: 8, background: "#FF4D6D", color: "#fff", fontSize: 8, fontWeight: 700, borderRadius: 4, padding: "2px 6px", pointerEvents: "none", zIndex: 2 }}>New</div>
       )}
+      <div style={{ position: "absolute", top: 8, right: 8, background: "#4CAF7D22", border: "1px solid #4CAF7D66", color: "#4CAF7D", fontSize: 7, fontWeight: 600, borderRadius: 3, padding: "2px 5px", pointerEvents: "none", zIndex: 2 }}>ATS ✓</div>
 
-      {/* Hover label */}
-      <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 hover:opacity-100 transition-opacity">
-        <div>
-          <p className="text-[10px] font-semibold text-white">{template.name}</p>
-          <p className="text-[9px] text-slate-400">{template.targetRole}</p>
-        </div>
-      </div>
-    </motion.div>
+      {/* Zoom popup on hover */}
+      {hovered && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.18 }}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -55%)",
+            zIndex: 100,
+            pointerEvents: "none",
+            filter: `drop-shadow(0 24px 48px ${template.accentColor}66)`,
+          }}
+        >
+          <div style={{ border: `2px solid ${template.accentColor}`, borderRadius: 14, overflow: "hidden" }}>
+            <ResumeMock t={template} s={1.95} />
+          </div>
+        </motion.div>
+      )}
+    </div>
   );
 }
 
@@ -236,7 +317,7 @@ export default function ResumeBuilderPage() {
             </button>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ overflowY: "visible", paddingTop: "180px", marginTop: "-180px" }}>
             {RESUME_TEMPLATES.map((t, i) => (
               <TemplateCard key={t.id} template={t} index={i} />
             ))}
