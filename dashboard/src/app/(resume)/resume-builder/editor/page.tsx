@@ -254,9 +254,9 @@ export default function EditorPage() {
       const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pdfW = 210;    // A4 width mm
       const pdfPageH = 297; // A4 height mm
-      const MARGIN = 10;   // 10 mm margin on all sides
-      const contentW = pdfW - MARGIN * 2;  // 190 mm
-      const contentH = pdfPageH - MARGIN * 2; // 277 mm per page
+      const MARGIN = 5;    // 5 mm margin on all sides
+      const contentW = pdfW - MARGIN * 2;  // 200 mm
+      const contentH = pdfPageH - MARGIN * 2; // 287 mm per page
       // px per mm: scale canvas width to fit within content width
       const pxPerMm = canvas.width / contentW;
       const pageHeightPx = contentH * pxPerMm;

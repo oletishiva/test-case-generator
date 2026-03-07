@@ -23,6 +23,7 @@ ONLY a valid JSON object matching this exact structure. No markdown, no explanat
 Rules:
 - For skills, infer level 1-5 based on context (mentioned as "expert" = 5, "proficient" = 4, "familiar" = 2)
 - For bullets, keep them exactly as written but clean formatting artifacts
+- CRITICAL: Fix all word spacing — PDFs often concatenate words without spaces (e.g. "TestArchitectwith" should be "Test Architect with", "developmentfromscratch" should be "development from scratch"). Insert spaces between words wherever they are missing.
 - If a field is missing, use empty string or empty array
 - achievements: extract any quantified results (e.g. "reduced by 40%" → metric: "40%", label: "reduction")
 - Return ONLY the JSON, nothing else`;
