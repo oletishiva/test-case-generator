@@ -219,7 +219,16 @@ export default function EditorPage() {
 
       const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
-      pdf.save(`${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`);
+      const filename = `${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`;
+      const blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success(isPro ? "Resume downloaded!" : "Resume downloaded! Upgrade to Pro to remove watermark.");
     } catch (err) {
       toast.error("Download failed: " + (err instanceof Error ? err.message : String(err)));
