@@ -125,6 +125,7 @@ export default function EditorPage() {
   const [atsScore, setAtsScore] = useState<AtsScore | null>(null);
   const [atsLoading, setAtsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [rightOpen, setRightOpen] = useState(true);
 
   useEffect(() => {
@@ -161,22 +162,30 @@ export default function EditorPage() {
 
   /* ── PDF download ─────────────────────────────────────── */
   async function downloadPdf() {
+    if (downloading) return;
+    setDownloading(true);
     try {
-      toast("Generating PDF…", { duration: 4000 });
+      toast("Generating PDF…", { duration: 6000 });
       const plan = user?.publicMetadata?.plan as string | undefined;
       const isPro = plan === "pro" || plan === "admin";
-
-      const [{ default: html2canvas }, jspdfMod] = await Promise.all([
-        import("html2canvas"), import("jspdf"),
-      ]);
-      // jsPDF v4 may export as named or default
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const jsPDF = (jspdfMod as any).jsPDF ?? (jspdfMod as any).default;
 
       const el = document.getElementById("resume-preview");
       if (!el) { toast.error("Preview element not found — try refreshing."); return; }
 
-      toast("Rendering resume…", { duration: 4000 });
+      // Dynamically import libs
+      const [{ default: html2canvas }, jspdfMod] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      // jsPDF v4 exports named `jsPDF`; v3 exports as default
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const JsPDF = (jspdfMod as any).jsPDF ?? (jspdfMod as any).default;
+      if (typeof JsPDF !== "function") {
+        toast.error("PDF library failed to load. Please refresh and try again.");
+        return;
+      }
+
+      toast("Rendering…", { duration: 6000 });
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
@@ -184,6 +193,11 @@ export default function EditorPage() {
         backgroundColor: "#ffffff",
         logging: false,
       });
+
+      if (!canvas || canvas.width === 0) {
+        toast.error("Capture failed — canvas is empty. Try again.");
+        return;
+      }
 
       // Free users get a watermark banner at the bottom
       if (!isPro) {
@@ -203,12 +217,14 @@ export default function EditorPage() {
         ctx.fillText("Upgrade to Pro for watermark-free PDF  ·  ai-testcraft.vercel.app", canvas.width / 2, canvas.height - bh + 44);
       }
 
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
       pdf.save(`${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`);
       toast.success(isPro ? "Resume downloaded!" : "Resume downloaded! Upgrade to Pro to remove watermark.");
     } catch (err) {
       toast.error("Download failed: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -272,7 +288,7 @@ export default function EditorPage() {
         <div style={{ flex: 1 }} />
 
         <ToolBtn icon={Save}     label={saving ? "…" : "Save"} active={false} onClick={saveSession} />
-        <ToolBtn icon={Download} label="Download" active={false} onClick={downloadPdf} />
+        <ToolBtn icon={Download} label={downloading ? "…" : "Download"} active={false} onClick={downloadPdf} />
       </aside>
 
       {/* ══ CENTER: RESUME PREVIEW ═══════════════════════ */}
@@ -298,9 +314,9 @@ export default function EditorPage() {
               {rightOpen ? <ChevronRight style={{ width: 12, height: 12 }} /> : <ChevronLeft style={{ width: 12, height: 12 }} />}
               {rightOpen ? "Hide panel" : "Show panel"}
             </button>
-            <button onClick={downloadPdf}
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, background: "#2563eb", border: "none", color: "#fff", borderRadius: 6, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>
-              <Download style={{ width: 12, height: 12 }} /> Download PDF
+            <button onClick={downloadPdf} disabled={downloading}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, background: downloading ? "#93c5fd" : "#2563eb", border: "none", color: "#fff", borderRadius: 6, padding: "4px 12px", cursor: downloading ? "wait" : "pointer", fontWeight: 600 }}>
+              <Download style={{ width: 12, height: 12 }} /> {downloading ? "Generating…" : "Download PDF"}
             </button>
           </div>
         </div>
