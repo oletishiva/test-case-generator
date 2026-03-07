@@ -162,22 +162,27 @@ export default function EditorPage() {
   /* ── PDF download ─────────────────────────────────────── */
   async function downloadPdf() {
     try {
-      toast("Generating PDF…", { duration: 2000 });
+      toast("Generating PDF…", { duration: 4000 });
       const plan = user?.publicMetadata?.plan as string | undefined;
       const isPro = plan === "pro" || plan === "admin";
 
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+      const [{ default: html2canvas }, jspdfMod] = await Promise.all([
         import("html2canvas"), import("jspdf"),
       ]);
+      // jsPDF v4 may export as named or default
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const jsPDF = (jspdfMod as any).jsPDF ?? (jspdfMod as any).default;
+
       const el = document.getElementById("resume-preview");
-      if (!el) { toast.error("Preview not ready, try again."); return; }
+      if (!el) { toast.error("Preview element not found — try refreshing."); return; }
+
+      toast("Rendering resume…", { duration: 4000 });
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
-        width: 794,
-        windowWidth: 794,
+        logging: false,
       });
 
       // Free users get a watermark banner at the bottom
@@ -302,12 +307,7 @@ export default function EditorPage() {
 
         <UsageBanner />
 
-        {/* Hidden full-size resume used by html2canvas for PDF export */}
-        <div id="resume-preview" style={{ position: "fixed", top: 0, left: "-9999px", width: 794, pointerEvents: "none" }}>
-          <TemplateComponent data={resumeData} />
-        </div>
-
-        {/* Visible scaled preview */}
+        {/* Visible scaled preview — id used by html2canvas for PDF export */}
         <div style={{
           transform: `scale(${previewScale})`,
           transformOrigin: "top center",
@@ -315,7 +315,9 @@ export default function EditorPage() {
           boxShadow: "0 8px 48px rgba(0,0,0,0.18)",
           borderRadius: 2,
         }}>
-          <TemplateComponent data={resumeData} />
+          <div id="resume-preview">
+            <TemplateComponent data={resumeData} />
+          </div>
         </div>
       </main>
 
