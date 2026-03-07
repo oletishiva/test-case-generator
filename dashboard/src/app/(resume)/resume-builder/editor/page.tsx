@@ -192,6 +192,17 @@ export default function EditorPage() {
         allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
+        onclone: (clonedDoc) => {
+          // html2canvas can't parse oklch()/lab() colors from globals.css.
+          // Templates use only inline styles so replacing these in the clone is safe.
+          clonedDoc.querySelectorAll("style").forEach((style) => {
+            if (style.textContent) {
+              style.textContent = style.textContent
+                .replace(/oklch\([^)]+\)/g, "#888")
+                .replace(/\blab\([^)]+\)/g, "#888");
+            }
+          });
+        },
       });
 
       if (!canvas || canvas.width === 0) {
