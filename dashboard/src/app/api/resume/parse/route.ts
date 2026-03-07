@@ -48,30 +48,12 @@ export async function POST(req: NextRequest) {
 
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Custom page renderer — avoids canvas/DOMMatrix APIs (Node.js has none)
+      // pdf-parse v2 uses a class-based API: new PDFParse({ data }) → .getText()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      async function pageRenderTextOnly(pageData: any): Promise<string> {
-        return pageData
-          .getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .then((textContent: any) => {
-            let lastY: number | undefined;
-            let text = "";
-            for (const item of textContent.items) {
-              const y = item.transform?.[5];
-              if (lastY !== undefined && lastY !== y) text += "\n";
-              text += item.str;
-              lastY = y;
-            }
-            return text;
-          });
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfModule = await import("pdf-parse") as any;
-      const pdfParse = pdfModule.default ?? pdfModule;
-      const pdfData = await pdfParse(buffer, { pagerender: pageRenderTextOnly });
-      resumeText = pdfData.text;
+      const { PDFParse } = await import("pdf-parse") as any;
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      const result = await parser.getText();
+      resumeText = result.text;
     } else if (pastedText) {
       resumeText = pastedText;
     } else {
