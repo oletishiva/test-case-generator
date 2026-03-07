@@ -10,6 +10,7 @@ import { SAMPLE_RESUME } from "@/lib/resume/parser";
 import TemplateGallery from "@/components/resume/TemplateGallery";
 import AtsScorePanel from "@/components/resume/AtsScorePanel";
 import { supabase } from "@/lib/supabase";
+import UsageBanner from "@/components/resume/UsageBanner";
 
 // Lazy-load template components (avoid SSR issues)
 const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false });
@@ -145,6 +146,7 @@ export default function EditorPage() {
 
       {/* ── Center: Live preview ────────────────────────── */}
       <main style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#0a0a10" }}>
+        <UsageBanner />
         {/* Toolbar */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "11px", color: "#C9A84C", fontWeight: 600 }}>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ResumeData, Experience, Skill } from "@/types/resume";
 import { SAMPLE_RESUME } from "@/lib/resume/parser";
+import UsageBanner from "@/components/resume/UsageBanner";
 
 /* ── Types ──────────────────────────────────────────────────── */
 type Panel = 1 | 2 | 3;
@@ -197,6 +198,8 @@ export default function UploadPage() {
   return (
     <div className="min-h-screen px-4 py-10" style={{ background: "#0d0d14", color: "#fff" }}>
       <div className="mx-auto max-w-3xl">
+
+          <UsageBanner />
 
         {/* Stepper header */}
         <div className="mb-10 flex items-center justify-center gap-3">

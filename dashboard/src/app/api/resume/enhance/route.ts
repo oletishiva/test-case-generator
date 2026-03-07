@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { parseResumeJson } from "@/lib/resume/parser";
+import { checkAndIncrementUsage } from "@/lib/resume/usage";
 import type { ResumeData } from "@/types/resume";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await currentUser();
+    const plan = user?.publicMetadata?.plan as string | undefined;
+
+    const usage = await checkAndIncrementUsage(userId, "enhance", plan);
+    if (!usage.allowed) {
+      return NextResponse.json(
+        { error: `Free plan limit reached (${usage.used}/${usage.limit} enhances used). Upgrade to Pro for unlimited access.` },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json() as {
       resumeData: ResumeData;
       targetRole?: string;

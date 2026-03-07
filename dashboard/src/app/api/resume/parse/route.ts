@@ -1,11 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { parseResumeJson } from "@/lib/resume/parser";
+import { checkAndIncrementUsage } from "@/lib/resume/usage";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await currentUser();
+    const plan = user?.publicMetadata?.plan as string | undefined;
+
+    const usage = await checkAndIncrementUsage(userId, "parse", plan);
+    if (!usage.allowed) {
+      return NextResponse.json(
+        { error: `Free plan limit reached (${usage.used}/${usage.limit} parses used). Upgrade to Pro for unlimited access.` },
+        { status: 429 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const pastedText = formData.get("text") as string | null;
@@ -20,7 +38,9 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       // Dynamically import pdf-parse to avoid build-time issues
-      const pdfParse = (await import("pdf-parse")).default;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfModule = await import("pdf-parse") as any;
+      const pdfParse = pdfModule.default ?? pdfModule;
       const pdfData = await pdfParse(buffer);
       resumeText = pdfData.text;
     } else if (pastedText) {

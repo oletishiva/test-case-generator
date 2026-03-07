@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { cleanJson } from "@/lib/resume/parser";
+import { checkAndIncrementUsage } from "@/lib/resume/usage";
 import type { ResumeData, AtsScore } from "@/types/resume";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +35,22 @@ const ATS_CRITERIA = [
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await currentUser();
+    const plan = user?.publicMetadata?.plan as string | undefined;
+
+    const usage = await checkAndIncrementUsage(userId, "ats-score", plan);
+    if (!usage.allowed) {
+      return NextResponse.json(
+        { error: `Free plan limit reached (${usage.used}/${usage.limit} ATS scores used). Upgrade to Pro for unlimited access.` },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json() as {
       resumeData: ResumeData;
       jobDescription?: string;
