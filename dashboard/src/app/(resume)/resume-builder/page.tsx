@@ -12,18 +12,18 @@ import { SAMPLE_RESUME } from "@/lib/resume/parser";
 import type { ResumeData } from "@/types/resume";
 
 /* ── Lazy-load real template components ────────────────────── */
-const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false, loading: () => <TemplateSkeleton bg="#0e0e16" /> });
-const NeonCircuit    = dynamic(() => import("@/components/resume/templates/NeonCircuit"),    { ssr: false, loading: () => <TemplateSkeleton bg="#050510" /> });
+const ClassicWhite   = dynamic(() => import("@/components/resume/templates/ClassicWhite"),   { ssr: false, loading: () => <TemplateSkeleton bg="#ffffff" /> });
+const TwoColumnClean = dynamic(() => import("@/components/resume/templates/TwoColumnClean"), { ssr: false, loading: () => <TemplateSkeleton bg="#ffffff" /> });
 const EditorialBloom = dynamic(() => import("@/components/resume/templates/EditorialBloom"), { ssr: false, loading: () => <TemplateSkeleton bg="#faf8f4" /> });
 const MintFresh      = dynamic(() => import("@/components/resume/templates/MintFresh"),      { ssr: false, loading: () => <TemplateSkeleton bg="#f6fef9" /> });
-const SteelPro       = dynamic(() => import("@/components/resume/templates/SteelPro"),       { ssr: false, loading: () => <TemplateSkeleton bg="#111827" /> });
+const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false, loading: () => <TemplateSkeleton bg="#0e0e16" /> });
 
 const TEMPLATES: { id: string; name: string; role: string; accent: string; Component: React.ComponentType<{ data: ResumeData }> }[] = [
-  { id: "obsidian-gold",   name: "Obsidian Gold",   role: "QA Architect / Senior Lead",  accent: "#C9A84C", Component: ObsidianGold },
-  { id: "neon-circuit",    name: "Neon Circuit",    role: "SDET / DevOps QA",            accent: "#00F5FF", Component: NeonCircuit },
-  { id: "editorial-bloom", name: "Editorial Bloom", role: "QA Lead / People Manager",    accent: "#FF6B9D", Component: EditorialBloom },
-  { id: "mint-fresh",      name: "Mint Fresh",      role: "API / Backend QA Engineer",   accent: "#4CAF7D", Component: MintFresh },
-  { id: "steel-pro",       name: "Steel Pro",       role: "Performance / Security QA",   accent: "#8B9BB4", Component: SteelPro },
+  { id: "classic-white",    name: "Classic White",    role: "All QA Roles · ATS Optimised",  accent: "#2563eb", Component: ClassicWhite },
+  { id: "two-column-clean", name: "Two Column",       role: "Senior QA / QA Lead",           accent: "#2563eb", Component: TwoColumnClean },
+  { id: "editorial-bloom",  name: "Editorial Bloom",  role: "QA Lead / People Manager",      accent: "#FF6B9D", Component: EditorialBloom },
+  { id: "mint-fresh",       name: "Mint Fresh",       role: "API / Backend QA Engineer",     accent: "#4CAF7D", Component: MintFresh },
+  { id: "obsidian-gold",    name: "Obsidian Gold",    role: "QA Architect / Senior Lead",    accent: "#C9A84C", Component: ObsidianGold },
 ];
 
 /* ── Template skeleton while loading ──────────────────────── */
@@ -32,33 +32,34 @@ function TemplateSkeleton({ bg }: { bg: string }) {
 }
 
 /* ── Scaled real template preview ─────────────────────────── */
-// Show 4 cards; ~262px each fits within 1100px container
-const CARD_W = 262;
-const SCALE  = CARD_W / 794;           // 0.33
-const CARD_H = Math.round(1123 * SCALE); // 371
+// Show 3 cards; ~330px each → scale ~0.415 → text is clearly readable
+const CARD_W = 330;
 
 function RealPreview({ t, featured = false }: { t: typeof TEMPLATES[0]; featured?: boolean }) {
   const { Component } = t;
-  const w = featured ? CARD_W * 1.07 : CARD_W;
-  const h = featured ? CARD_H * 1.07 : CARD_H;
+  const w = featured ? Math.round(CARD_W * 1.09) : CARD_W;
+  const h = Math.round(w / 794 * 1123);
   const sc = w / 794;
   return (
-    /* White card wrapper — exactly like enhancv */
+    /* White card wrapper — shadows + accent border on featured */
     <div style={{
       background: "#fff",
-      borderRadius: 16,
+      borderRadius: 18,
       padding: 10,
       boxShadow: featured
-        ? "0 24px 64px rgba(0,0,0,0.18)"
-        : "0 4px 24px rgba(0,0,0,0.10)",
-      border: "1px solid #e5e7eb",
+        ? "0 32px 80px rgba(0,0,0,0.22), 0 0 0 2px #C9A84C66"
+        : "0 6px 28px rgba(0,0,0,0.12)",
+      border: featured ? "2px solid #C9A84C44" : "1px solid #e5e7eb",
       transition: "box-shadow 0.25s, transform 0.25s",
       flexShrink: 0,
     }}>
-      <div style={{ width: w, height: h, overflow: "hidden", borderRadius: 8 }}>
+      <div style={{ width: w, height: h, overflow: "hidden", borderRadius: 10, position: "relative" }}>
         <div style={{ transform: `scale(${sc})`, transformOrigin: "top left", width: 794, pointerEvents: "none" }}>
           <Component data={SAMPLE_RESUME} />
         </div>
+        {/* Subtle gradient fade at the bottom edge */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48,
+          background: "linear-gradient(transparent, rgba(255,255,255,0.6))" }} />
       </div>
     </div>
   );
@@ -67,60 +68,75 @@ function RealPreview({ t, featured = false }: { t: typeof TEMPLATES[0]; featured
 /* ── Template Carousel ─────────────────────────────────────── */
 function TemplateCarousel({ onSelect }: { onSelect: () => void }) {
   const [active, setActive] = useState(0);
-  const visible = 4;
+  const visible = 3;
   const total = TEMPLATES.length;
-  const featuredOffset = 1; // second card is "center-featured"
+  const maxActive = total - visible; // 2
 
   const prev = () => setActive(a => Math.max(0, a - 1));
-  const next = () => setActive(a => Math.min(total - visible, a + 1));
+  const next = () => setActive(a => Math.min(maxActive, a + 1));
 
   return (
-    <div style={{ position: "relative", padding: "20px 56px 8px" }}>
+    <div style={{ position: "relative", padding: "24px 64px 8px" }}>
       {/* Left arrow */}
       <button onClick={prev} disabled={active === 0}
-        style={{ position: "absolute", left: 4, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active === 0 ? "default" : "pointer", opacity: active === 0 ? 0.25 : 1, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", transition: "opacity 0.2s" }}>
-        <ChevronLeft style={{ width: 20, height: 20, color: "#374151" }} />
+        style={{ position: "absolute", left: 8, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 48, height: 48, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active === 0 ? "default" : "pointer", opacity: active === 0 ? 0.2 : 1, boxShadow: "0 4px 16px rgba(0,0,0,0.14)", transition: "opacity 0.2s" }}>
+        <ChevronLeft style={{ width: 22, height: 22, color: "#374151" }} />
       </button>
 
-      {/* Cards row */}
-      <div style={{ display: "flex", gap: 18, alignItems: "flex-end", justifyContent: "center" }}>
+      {/* Cards row — center-aligned, featured card elevated */}
+      <div style={{ display: "flex", gap: 22, alignItems: "flex-end", justifyContent: "center" }}>
         {TEMPLATES.map((t, i) => {
           const offset = i - active;
           if (offset < 0 || offset >= visible) return null;
-          const featured = offset === featuredOffset;
+          const featured = offset === 1; // middle card
           return (
             <motion.div key={t.id}
-              animate={{ y: featured ? -14 : 0 }}
-              whileHover={{ y: featured ? -20 : -8, scale: 1.02 }}
-              transition={{ duration: 0.22 }}
+              layout
+              animate={{ y: featured ? -18 : 0 }}
+              whileHover={{ y: featured ? -26 : -10, scale: 1.015 }}
+              transition={{ duration: 0.24, type: "spring", stiffness: 260, damping: 22 }}
               onClick={onSelect}
               style={{ cursor: "pointer", position: "relative" }}
             >
               <RealPreview t={t} featured={featured} />
 
-              {/* Hover CTA button */}
+              {/* "Use template" overlay on hover */}
               <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                whileHover={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                whileHover={{ opacity: 1 }}
+                transition={{ duration: 0.18 }}
                 style={{
-                  position: "absolute", bottom: 0, left: 0, right: 0,
-                  display: "flex", justifyContent: "center", paddingBottom: 14,
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 18,
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  paddingBottom: 20,
+                  background: "linear-gradient(transparent 50%, rgba(0,0,0,0.38) 100%)",
                 }}
               >
                 <div style={{
-                  background: t.accent, color: t.accent === "#C9A84C" || t.accent === "#4CAF7D" ? "#000" : "#fff",
-                  fontWeight: 700, fontSize: 12, borderRadius: 8,
-                  padding: "9px 20px", whiteSpace: "nowrap",
-                  boxShadow: `0 4px 16px ${t.accent}55`,
+                  background: t.accent,
+                  color: t.accent === "#C9A84C" || t.accent === "#4CAF7D" ? "#000" : "#fff",
+                  fontWeight: 800, fontSize: 13, borderRadius: 10,
+                  padding: "10px 24px", whiteSpace: "nowrap",
+                  boxShadow: `0 6px 20px ${t.accent}66`,
+                  letterSpacing: "0.01em",
                 }}>
                   Use this template →
                 </div>
               </motion.div>
 
-              {/* Label below card */}
-              <div style={{ paddingTop: 12, textAlign: "center" }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{t.name}</p>
-                <p style={{ fontSize: 11, color: "#9ca3af", margin: "3px 0 0" }}>{t.role}</p>
+              {/* Label below */}
+              <div style={{ paddingTop: 14, textAlign: "center" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: 0 }}>{t.name}</p>
+                <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>{t.role}</p>
+                {featured && (
+                  <span style={{ display: "inline-block", marginTop: 6, background: "#C9A84C", color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 99, padding: "2px 10px", letterSpacing: "0.06em" }}>
+                    FEATURED
+                  </span>
+                )}
               </div>
             </motion.div>
           );
@@ -128,17 +144,17 @@ function TemplateCarousel({ onSelect }: { onSelect: () => void }) {
       </div>
 
       {/* Right arrow */}
-      <button onClick={next} disabled={active >= total - visible}
-        style={{ position: "absolute", right: 4, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active >= total - visible ? "default" : "pointer", opacity: active >= total - visible ? 0.25 : 1, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", transition: "opacity 0.2s" }}>
-        <ChevronRight style={{ width: 20, height: 20, color: "#374151" }} />
+      <button onClick={next} disabled={active >= maxActive}
+        style={{ position: "absolute", right: 8, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 48, height: 48, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active >= maxActive ? "default" : "pointer", opacity: active >= maxActive ? 0.2 : 1, boxShadow: "0 4px 16px rgba(0,0,0,0.14)", transition: "opacity 0.2s" }}>
+        <ChevronRight style={{ width: 22, height: 22, color: "#374151" }} />
       </button>
 
-      {/* Dots */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 7, marginTop: 24 }}>
+      {/* Dot pagination */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 28 }}>
         {TEMPLATES.map((_, i) => (
           <button key={i}
-            onClick={() => setActive(Math.min(i, total - visible))}
-            style={{ width: i === active ? 24 : 8, height: 8, borderRadius: 99, border: "none", cursor: "pointer", background: i === active ? "#C9A84C" : "#d1d5db", transition: "all 0.25s", padding: 0 }}
+            onClick={() => setActive(Math.min(i, maxActive))}
+            style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 99, border: "none", cursor: "pointer", background: i === active ? "#C9A84C" : "#d1d5db", transition: "all 0.28s", padding: 0 }}
           />
         ))}
       </div>

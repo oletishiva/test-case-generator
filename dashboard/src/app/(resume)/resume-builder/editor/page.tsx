@@ -2,68 +2,144 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { Download, Eye, Sparkles, FileText } from "lucide-react";
+import {
+  Download, Sparkles, FileText, LayoutTemplate,
+  ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight,
+  Save,
+} from "lucide-react";
 import type { ResumeData, AtsScore } from "@/types/resume";
 import { SAMPLE_RESUME } from "@/lib/resume/parser";
-import TemplateGallery from "@/components/resume/TemplateGallery";
 import AtsScorePanel from "@/components/resume/AtsScorePanel";
 import { supabase } from "@/lib/supabase";
 import UsageBanner from "@/components/resume/UsageBanner";
 
-// Lazy-load template components (avoid SSR issues)
-const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false });
-const NeonCircuit    = dynamic(() => import("@/components/resume/templates/NeonCircuit"),    { ssr: false });
+// Lazy-load templates
+const ClassicWhite   = dynamic(() => import("@/components/resume/templates/ClassicWhite"),   { ssr: false });
+const TwoColumnClean = dynamic(() => import("@/components/resume/templates/TwoColumnClean"), { ssr: false });
 const EditorialBloom = dynamic(() => import("@/components/resume/templates/EditorialBloom"), { ssr: false });
 const MintFresh      = dynamic(() => import("@/components/resume/templates/MintFresh"),      { ssr: false });
-const SteelPro       = dynamic(() => import("@/components/resume/templates/SteelPro"),       { ssr: false });
+const ObsidianGold   = dynamic(() => import("@/components/resume/templates/ObsidianGold"),   { ssr: false });
+
+const TEMPLATES = [
+  { id: "classic-white",    name: "Classic White",   accent: "#2563eb", bg: "#ffffff" },
+  { id: "two-column-clean", name: "Two Column",      accent: "#2563eb", bg: "#ffffff" },
+  { id: "editorial-bloom",  name: "Editorial Bloom", accent: "#FF6B9D", bg: "#faf8f4" },
+  { id: "mint-fresh",       name: "Mint Fresh",      accent: "#4CAF7D", bg: "#f6fef9" },
+  { id: "obsidian-gold",    name: "Obsidian Gold",   accent: "#C9A84C", bg: "#0e0e16" },
+];
 
 const TEMPLATE_MAP: Record<string, React.ComponentType<{ data: ResumeData }>> = {
-  "obsidian-gold":    ObsidianGold,
-  "neon-circuit":     NeonCircuit,
+  "classic-white":    ClassicWhite,
+  "two-column-clean": TwoColumnClean,
   "editorial-bloom":  EditorialBloom,
   "mint-fresh":       MintFresh,
-  "steel-pro":        SteelPro,
+  "obsidian-gold":    ObsidianGold,
 };
 
-/* ── simple inline editor field ──────────────────────────── */
-function Field({ label, value, onChange, multiline = false }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
-  const cls = "w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:border-yellow-500/50 focus:outline-none";
+/* ── Sidebar tool button ──────────────────────────────────── */
+function ToolBtn({
+  icon: Icon, label, active, onClick,
+}: { icon: React.ElementType; label: string; active?: boolean; onClick: () => void }) {
   return (
-    <div className="mb-2.5">
-      <label className="mb-1 block text-[10px] text-slate-500">{label}</label>
+    <button onClick={onClick} style={{
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      gap: 4, width: "100%", padding: "10px 6px", border: "none", cursor: "pointer",
+      background: active ? "#eff6ff" : "transparent",
+      borderRadius: 8,
+      borderLeft: active ? "3px solid #2563eb" : "3px solid transparent",
+      color: active ? "#2563eb" : "#6b7280",
+      transition: "all 0.15s",
+    }}>
+      <Icon style={{ width: 18, height: 18 }} />
+      <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>{label}</span>
+    </button>
+  );
+}
+
+/* ── Edit field ───────────────────────────────────────────── */
+function Field({ label, value, onChange, multiline = false }: {
+  label: string; value: string; onChange: (v: string) => void; multiline?: boolean;
+}) {
+  const base: React.CSSProperties = {
+    width: "100%", borderRadius: 6, border: "1px solid #e5e7eb",
+    background: "#f9fafb", padding: "6px 10px", fontSize: 12, color: "#111827",
+    outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+    transition: "border-color 0.15s",
+  };
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ display: "block", fontSize: 10, fontWeight: 600, color: "#6b7280", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        {label}
+      </label>
       {multiline
-        ? <textarea rows={3} className={cls} value={value} onChange={e => onChange(e.target.value)} />
-        : <input type="text" className={cls} value={value} onChange={e => onChange(e.target.value)} />}
+        ? <textarea rows={3} style={{ ...base, resize: "vertical" }} value={value} onChange={e => onChange(e.target.value)} />
+        : <input type="text" style={base} value={value} onChange={e => onChange(e.target.value)} />}
     </div>
   );
 }
 
+/* ── Mini template thumbnail ──────────────────────────────── */
+function TemplateThumbnail({ t, selected, onSelect }: {
+  t: typeof TEMPLATES[0]; selected: boolean; onSelect: () => void;
+}) {
+  const Component = TEMPLATE_MAP[t.id];
+  const TH = 100;
+  const sc = TH / 1123;
+  const TW = Math.round(794 * sc);
+  return (
+    <button onClick={onSelect} style={{
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+      background: "transparent", border: "none", cursor: "pointer", padding: "4px",
+      borderRadius: 8, outline: "none",
+    }}>
+      <div style={{
+        border: selected ? `2px solid ${t.accent}` : "2px solid #e5e7eb",
+        borderRadius: 6, overflow: "hidden", width: TW, height: TH,
+        boxShadow: selected ? `0 0 0 3px ${t.accent}33` : "0 1px 4px rgba(0,0,0,0.1)",
+        background: t.bg, transition: "border-color 0.15s",
+      }}>
+        <div style={{ transform: `scale(${sc})`, transformOrigin: "top left", width: 794, pointerEvents: "none" }}>
+          <Component data={SAMPLE_RESUME} />
+        </div>
+      </div>
+      <span style={{ fontSize: 9, fontWeight: selected ? 700 : 500, color: selected ? t.accent : "#6b7280", textAlign: "center", lineHeight: 1.3 }}>
+        {t.name}
+      </span>
+    </button>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════ */
 export default function EditorPage() {
   const { user } = useUser();
+  const router = useRouter();
   const [resumeData, setResumeData] = useState<ResumeData>(SAMPLE_RESUME);
-  const [selectedTemplate, setSelectedTemplate] = useState("obsidian-gold");
-  const [activeTab, setActiveTab] = useState<"edit" | "ats">("edit");
+  const [selectedTemplate, setSelectedTemplate] = useState("classic-white");
+  const [activePanel, setActivePanel] = useState<"edit" | "templates" | "ats">("edit");
   const [atsScore, setAtsScore] = useState<AtsScore | null>(null);
   const [atsLoading, setAtsLoading] = useState(false);
-  const [fullPreview, setFullPreview] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rightOpen, setRightOpen] = useState(true);
 
-  // Load resume from sessionStorage
   useEffect(() => {
     const stored = sessionStorage.getItem("resumeData");
     if (stored) {
       try { setResumeData(JSON.parse(stored)); } catch { /* use sample */ }
     }
+    const tpl = sessionStorage.getItem("selectedTemplate");
+    if (tpl && TEMPLATE_MAP[tpl]) setSelectedTemplate(tpl);
   }, []);
 
-  const TemplateComponent = TEMPLATE_MAP[selectedTemplate] ?? ObsidianGold;
+  const TemplateComponent = TEMPLATE_MAP[selectedTemplate] ?? ClassicWhite;
+  const currentTpl = TEMPLATES.find(t => t.id === selectedTemplate) ?? TEMPLATES[0];
 
   /* ── ATS scoring ──────────────────────────────────────── */
   async function runAtsScore() {
     setAtsLoading(true);
-    setActiveTab("ats");
+    setActivePanel("ats");
     try {
       const res = await fetch("/api/resume/ats-score", {
         method: "POST",
@@ -82,23 +158,20 @@ export default function EditorPage() {
 
   /* ── PDF download ─────────────────────────────────────── */
   async function downloadPdf() {
-    // Check plan — FREE users see upgrade prompt
     const plan = user?.publicMetadata?.plan as string | undefined;
     if (!plan || plan === "free") {
-      toast.error("PDF download requires a Pro plan. Upgrade to unlock!", { duration: 4000 });
+      toast.error("PDF download requires Pro plan. Upgrade to unlock!", { duration: 4000 });
       return;
     }
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
+        import("html2canvas"), import("jspdf"),
       ]);
       const el = document.getElementById("resume-preview");
       if (!el) return;
       const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
       pdf.save(`${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`);
       toast.success("Resume downloaded!");
     } catch {
@@ -106,7 +179,7 @@ export default function EditorPage() {
     }
   }
 
-  /* ── Save to Supabase ─────────────────────────────────── */
+  /* ── Save ─────────────────────────────────────────────── */
   async function saveSession() {
     if (!user) return;
     setSaving(true);
@@ -130,122 +203,155 @@ export default function EditorPage() {
     }
   }
 
-  /* ── Helpers ──────────────────────────────────────────── */
   function updatePersonal(key: string, val: string) {
     setResumeData(d => ({ ...d, personalInfo: { ...d.personalInfo, [key]: val } }));
   }
 
-  return (
-    <div style={{ display: "flex", height: "100vh", background: "#0d0d14", color: "#fff", overflow: "hidden" }}>
+  /* ── Preview scale to fit viewport ───────────────────── */
+  // Resume is 794px wide. Center area ≈ viewport minus 80 (tools) minus rightPanel
+  const previewScale = 0.82;
 
-      {/* ── Left: Template gallery ──────────────────────── */}
-      <aside style={{ width: "240px", overflowY: "auto", borderRight: "1px solid #ffffff10", padding: "16px 12px" }}>
-        <p style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", letterSpacing: "2px", color: "#6b7280", textTransform: "uppercase", marginBottom: "12px" }}>Templates</p>
-        <TemplateGallery selected={selectedTemplate} onSelect={setSelectedTemplate} />
+  return (
+    <div style={{ display: "flex", height: "100vh", background: "#f3f4f6", overflow: "hidden", fontFamily: "system-ui, sans-serif" }}>
+
+      {/* ══ LEFT NARROW TOOLBAR (like enhancv) ═══════════ */}
+      <aside style={{
+        width: 72, display: "flex", flexDirection: "column", alignItems: "center",
+        background: "#ffffff", borderRight: "1px solid #e5e7eb",
+        padding: "12px 6px", gap: 4, zIndex: 10, boxShadow: "1px 0 8px rgba(0,0,0,0.06)",
+      }}>
+        {/* Back */}
+        <button onClick={() => router.push("/resume-builder")} style={{
+          width: "100%", display: "flex", flexDirection: "column", alignItems: "center",
+          gap: 3, padding: "8px 6px", background: "transparent", border: "none", cursor: "pointer",
+          color: "#9ca3af", borderRadius: 8, marginBottom: 8,
+        }}>
+          <ArrowLeft style={{ width: 16, height: 16 }} />
+          <span style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Back</span>
+        </button>
+
+        <div style={{ width: "80%", height: 1, background: "#f3f4f6", marginBottom: 4 }} />
+
+        <ToolBtn icon={FileText}       label="Edit"      active={activePanel === "edit"}      onClick={() => { setActivePanel("edit"); setRightOpen(true); }} />
+        <ToolBtn icon={LayoutTemplate} label="Templates" active={activePanel === "templates"} onClick={() => { setActivePanel("templates"); setRightOpen(true); }} />
+        <ToolBtn icon={Sparkles}       label="ATS"       active={activePanel === "ats"}       onClick={() => { runAtsScore(); setRightOpen(true); }} />
+
+        <div style={{ flex: 1 }} />
+
+        <ToolBtn icon={Save}     label={saving ? "…" : "Save"} active={false} onClick={saveSession} />
+        <ToolBtn icon={Download} label="Download" active={false} onClick={downloadPdf} />
+        <ToolBtn icon={CheckCircle2} label="Upgrade" active={false} onClick={() => toast("Upgrade to Pro for PDF export")} />
       </aside>
 
-      {/* ── Center: Live preview ────────────────────────── */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#0a0a10" }}>
-        <UsageBanner />
-        {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "11px", color: "#C9A84C", fontWeight: 600 }}>
-            {TEMPLATE_MAP[selectedTemplate] ? selectedTemplate.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "Template"}
-          </span>
-          <div style={{ flex: 1 }} />
-          <button onClick={() => setFullPreview(true)}
-            style={{ display: "flex", alignItems: "center", gap: "4px", background: "#ffffff10", border: "1px solid #ffffff20", color: "#d1d5db", borderRadius: "6px", padding: "5px 10px", fontSize: "11px", cursor: "pointer" }}>
-            <Eye style={{ width: 12, height: 12 }} /> Full Preview
-          </button>
-          <button onClick={runAtsScore}
-            style={{ display: "flex", alignItems: "center", gap: "4px", background: "#C9A84C22", border: "1px solid #C9A84C44", color: "#C9A84C", borderRadius: "6px", padding: "5px 10px", fontSize: "11px", cursor: "pointer" }}>
-            <Sparkles style={{ width: 12, height: 12 }} /> ATS Score
-          </button>
-          <button onClick={downloadPdf}
-            style={{ display: "flex", alignItems: "center", gap: "4px", background: "linear-gradient(135deg,#C9A84C,#E8C96A)", color: "#000", border: "none", borderRadius: "6px", padding: "5px 12px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>
-            <Download style={{ width: 12, height: 12 }} /> PDF
-          </button>
-          <button onClick={saveSession} disabled={saving}
-            style={{ background: "#ffffff10", border: "1px solid #ffffff20", color: "#d1d5db", borderRadius: "6px", padding: "5px 10px", fontSize: "11px", cursor: "pointer" }}>
-            {saving ? "Saving..." : "Save"}
-          </button>
+      {/* ══ CENTER: RESUME PREVIEW ═══════════════════════ */}
+      <main style={{
+        flex: 1, overflowY: "auto", background: "#e9eaec",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        padding: "16px 24px 40px",
+      }}>
+        {/* Top bar */}
+        <div style={{
+          width: "100%", maxWidth: 794 * previewScale + 40,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: 12,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: currentTpl.accent }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{currentTpl.name}</span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => setRightOpen(o => !o)}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, background: "#fff", border: "1px solid #e5e7eb", color: "#374151", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>
+              {rightOpen ? <ChevronRight style={{ width: 12, height: 12 }} /> : <ChevronLeft style={{ width: 12, height: 12 }} />}
+              {rightOpen ? "Hide panel" : "Show panel"}
+            </button>
+            <button onClick={downloadPdf}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, background: "#2563eb", border: "none", color: "#fff", borderRadius: 6, padding: "4px 12px", cursor: "pointer", fontWeight: 600 }}>
+              <Download style={{ width: 12, height: 12 }} /> Download PDF
+            </button>
+          </div>
         </div>
 
-        {/* Scaled preview */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <div style={{ transform: "scale(0.65)", transformOrigin: "top center", marginBottom: "-280px" }}>
-            <TemplateComponent data={resumeData} />
-          </div>
+        <UsageBanner />
+
+        {/* The resume — white page on gray background */}
+        <div style={{
+          transform: `scale(${previewScale})`,
+          transformOrigin: "top center",
+          marginBottom: `-${Math.round(794 * 1.415 * (1 - previewScale))}px`,
+          boxShadow: "0 8px 48px rgba(0,0,0,0.18)",
+          borderRadius: 2,
+        }}>
+          <TemplateComponent data={resumeData} />
         </div>
       </main>
 
-      {/* ── Right: Edit / ATS ───────────────────────────── */}
-      <aside style={{ width: "300px", borderLeft: "1px solid #ffffff10", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        {/* Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid #ffffff10" }}>
-          {(["edit", "ats"] as const).map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              style={{
-                flex: 1, padding: "12px", fontSize: "11px", fontWeight: 600,
-                background: "transparent", border: "none", cursor: "pointer",
-                color: activeTab === tab ? "#C9A84C" : "#6b7280",
-                borderBottom: activeTab === tab ? "2px solid #C9A84C" : "2px solid transparent",
-                textTransform: "capitalize",
-              }}>
-              {tab === "edit" ? <><FileText style={{ display: "inline", width: 11, height: 11, marginRight: 4 }} />Edit</> : <><Sparkles style={{ display: "inline", width: 11, height: 11, marginRight: 4 }} />ATS Score</>}
-            </button>
-          ))}
-        </div>
+      {/* ══ RIGHT PANEL: Edit / Templates / ATS ══════════ */}
+      {rightOpen && (
+        <aside style={{
+          width: 300, borderLeft: "1px solid #e5e7eb", background: "#ffffff",
+          overflowY: "auto", display: "flex", flexDirection: "column",
+          boxShadow: "-2px 0 12px rgba(0,0,0,0.06)",
+        }}>
 
-        {/* Edit tab */}
-        {activeTab === "edit" && (
-          <div style={{ padding: "16px", flex: 1 }}>
-            <p style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", letterSpacing: "2px", color: "#6b7280", textTransform: "uppercase", marginBottom: "12px" }}>Personal Info</p>
-            <Field label="Full Name" value={resumeData.personalInfo.name} onChange={v => updatePersonal("name", v)} />
-            <Field label="Title" value={resumeData.personalInfo.title} onChange={v => updatePersonal("title", v)} />
-            <Field label="Email" value={resumeData.personalInfo.email} onChange={v => updatePersonal("email", v)} />
-            <Field label="Phone" value={resumeData.personalInfo.phone} onChange={v => updatePersonal("phone", v)} />
-            <Field label="Location" value={resumeData.personalInfo.location} onChange={v => updatePersonal("location", v)} />
-            <Field label="LinkedIn" value={resumeData.personalInfo.linkedin ?? ""} onChange={v => updatePersonal("linkedin", v)} />
-            <Field label="GitHub" value={resumeData.personalInfo.github ?? ""} onChange={v => updatePersonal("github", v)} />
-            <Field label="Summary" value={resumeData.personalInfo.summary} onChange={v => updatePersonal("summary", v)} multiline />
-
-            <p style={{ fontSize: "10px", fontFamily: "'Space Mono', monospace", letterSpacing: "2px", color: "#6b7280", textTransform: "uppercase", margin: "14px 0 10px" }}>Experience</p>
-            {resumeData.experience.map((exp, i) => (
-              <div key={i} style={{ marginBottom: "12px", padding: "10px", borderRadius: "8px", border: "1px solid #ffffff10", background: "#0f0f1a" }}>
-                <p style={{ fontSize: "11px", fontWeight: 600, color: "#C9A84C", marginBottom: "8px" }}>{exp.role} @ {exp.company}</p>
-                {exp.bullets.map((b, j) => (
-                  <textarea key={j} rows={2} value={b}
-                    onChange={e => {
-                      const updated = resumeData.experience.map((ex, ei) =>
-                        ei === i ? { ...ex, bullets: ex.bullets.map((bul, bi) => bi === j ? e.target.value : bul) } : ex
-                      );
-                      setResumeData(d => ({ ...d, experience: updated }));
-                    }}
-                    style={{ width: "100%", marginBottom: "4px", borderRadius: "6px", border: "1px solid #ffffff10", background: "#ffffff05", color: "#d1d5db", padding: "5px 8px", fontSize: "10px", resize: "none", outline: "none" }}
-                  />
+          {/* ── Templates panel ─────────────────────────── */}
+          {activePanel === "templates" && (
+            <div style={{ padding: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+                Choose Template
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {TEMPLATES.map(t => (
+                  <TemplateThumbnail key={t.id} t={t} selected={selectedTemplate === t.id}
+                    onSelect={() => { setSelectedTemplate(t.id); sessionStorage.setItem("selectedTemplate", t.id); }} />
                 ))}
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* ATS tab */}
-        {activeTab === "ats" && (
-          <AtsScorePanel score={atsScore} loading={atsLoading} onRescore={runAtsScore} />
-        )}
-      </aside>
+          {/* ── Edit panel ──────────────────────────────── */}
+          {activePanel === "edit" && (
+            <div style={{ padding: 16, flex: 1 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+                Personal Info
+              </p>
+              <Field label="Full Name"  value={resumeData.personalInfo.name}     onChange={v => updatePersonal("name", v)} />
+              <Field label="Title"      value={resumeData.personalInfo.title}    onChange={v => updatePersonal("title", v)} />
+              <Field label="Email"      value={resumeData.personalInfo.email}    onChange={v => updatePersonal("email", v)} />
+              <Field label="Phone"      value={resumeData.personalInfo.phone}    onChange={v => updatePersonal("phone", v)} />
+              <Field label="Location"   value={resumeData.personalInfo.location} onChange={v => updatePersonal("location", v)} />
+              <Field label="LinkedIn"   value={resumeData.personalInfo.linkedin ?? ""} onChange={v => updatePersonal("linkedin", v)} />
+              <Field label="Summary"    value={resumeData.personalInfo.summary}  onChange={v => updatePersonal("summary", v)} multiline />
 
-      {/* ── Full preview modal ──────────────────────────── */}
-      {fullPreview && (
-        <div
-          onClick={() => setFullPreview(false)}
-          style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, overflowY: "auto", display: "flex", justifyContent: "center", padding: "40px 20px" }}
-        >
-          <div onClick={e => e.stopPropagation()}>
-            <TemplateComponent data={resumeData} />
-          </div>
-        </div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em", margin: "18px 0 12px" }}>
+                Experience
+              </p>
+              {resumeData.experience.map((exp, i) => (
+                <div key={i} style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "#111827", marginBottom: 6 }}>{exp.role}</p>
+                  <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 8 }}>{exp.company}</p>
+                  {exp.bullets.map((b, j) => (
+                    <textarea key={j} rows={2} value={b}
+                      onChange={e => {
+                        const updated = resumeData.experience.map((ex, ei) =>
+                          ei === i ? { ...ex, bullets: ex.bullets.map((bul, bi) => bi === j ? e.target.value : bul) } : ex
+                        );
+                        setResumeData(d => ({ ...d, experience: updated }));
+                      }}
+                      style={{ width: "100%", marginBottom: 4, borderRadius: 5, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", padding: "5px 8px", fontSize: 10, resize: "none", outline: "none", boxSizing: "border-box", lineHeight: 1.5 }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── ATS panel ───────────────────────────────── */}
+          {activePanel === "ats" && (
+            <AtsScorePanel score={atsScore} loading={atsLoading} onRescore={runAtsScore} />
+          )}
+        </aside>
       )}
     </div>
   );
