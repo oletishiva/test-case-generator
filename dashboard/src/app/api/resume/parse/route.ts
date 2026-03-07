@@ -1,3 +1,14 @@
+// Polyfill browser APIs that pdfjs-dist expects in Node.js
+if (typeof (globalThis as Record<string, unknown>).DOMMatrix === "undefined") {
+  (globalThis as Record<string, unknown>).DOMMatrix = class DOMMatrix {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    constructor(_init?: string | number[]) {}
+  };
+}
+if (typeof (globalThis as Record<string, unknown>).Path2D === "undefined") {
+  (globalThis as Record<string, unknown>).Path2D = class Path2D {};
+}
+
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { auth, currentUser } from "@clerk/nextjs/server";
