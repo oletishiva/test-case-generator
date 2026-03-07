@@ -185,23 +185,44 @@ export default function EditorPage() {
         return;
       }
 
+      // Move element into viewport so html2canvas renders text correctly.
+      // z-index:-9999 hides it behind the main UI (which has a solid background).
+      const prevTop = el.style.top;
+      const prevLeft = el.style.left;
+      const prevZIndex = el.style.zIndex;
+      el.style.top = "0px";
+      el.style.left = "0px";
+      el.style.zIndex = "-9999";
+      // Two animation frames so the browser reflows text before capture
+      await new Promise<void>(r => requestAnimationFrame(() => { requestAnimationFrame(() => r()); }));
+
       toast("Rendering…", { duration: 6000 });
-      const canvas = await html2canvas(el, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        onclone: (clonedDoc) => {
-          clonedDoc.querySelectorAll("style").forEach((style) => {
-            if (style.textContent) {
-              style.textContent = style.textContent
-                .replace(/oklch\([^)]+\)/g, "#888")
-                .replace(/\blab\([^)]+\)/g, "#888");
-            }
-          });
-        },
-      });
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(el, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (clonedDoc) => {
+            clonedDoc.querySelectorAll("style").forEach((style) => {
+              if (style.textContent) {
+                style.textContent = style.textContent
+                  .replace(/oklch\([^)]+\)/g, "#888")
+                  .replace(/\blab\([^)]+\)/g, "#888");
+              }
+            });
+          },
+        });
+      } finally {
+        // Always restore so the hidden element returns off-screen
+        el.style.top = prevTop;
+        el.style.left = prevLeft;
+        el.style.zIndex = prevZIndex;
+      }
 
       if (!canvas || canvas.width === 0) {
         toast.error("Capture failed — canvas is empty. Try again.");
@@ -224,16 +245,19 @@ export default function EditorPage() {
       }
 
       const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pdfW = 210;   // A4 width mm
-      const pdfPageH = 297; // A4 page height mm
-      // px per mm based on canvas width mapped to A4 width
-      const pxPerMm = canvas.width / pdfW;
-      const pageHeightPx = pdfPageH * pxPerMm;
+      const pdfW = 210;    // A4 width mm
+      const pdfPageH = 297; // A4 height mm
+      const MARGIN = 10;   // 10 mm margin on all sides
+      const contentW = pdfW - MARGIN * 2;  // 190 mm
+      const contentH = pdfPageH - MARGIN * 2; // 277 mm per page
+      // px per mm: scale canvas width to fit within content width
+      const pxPerMm = canvas.width / contentW;
+      const pageHeightPx = contentH * pxPerMm;
       const totalPages = Math.ceil(canvas.height / pageHeightPx);
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) pdf.addPage();
-        // Crop canvas slice for this page
+        // Crop this page's slice from the full canvas
         const srcY = Math.round(page * pageHeightPx);
         const srcH = Math.min(Math.round(pageHeightPx), canvas.height - srcY);
         const pageCanvas = document.createElement("canvas");
@@ -241,9 +265,10 @@ export default function EditorPage() {
         pageCanvas.height = srcH;
         const pCtx = pageCanvas.getContext("2d")!;
         pCtx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.82);
-        const sliceH = srcH / pxPerMm;
-        pdf.addImage(pageImgData, "JPEG", 0, 0, pdfW, sliceH);
+        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.85);
+        const sliceH = srcH / pxPerMm; // mm height of this slice
+        // Place image with 10mm margin on all sides
+        pdf.addImage(pageImgData, "JPEG", MARGIN, MARGIN, contentW, sliceH);
       }
       const filename = `${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`;
       const blob = pdf.output("blob");
