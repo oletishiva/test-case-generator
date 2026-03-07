@@ -229,7 +229,18 @@ export default function EditorPage() {
       }
 
       const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
+      const imgData = canvas.toDataURL("image/png");
+      const pdfW = 210; // A4 width mm
+      const pdfPageH = 297; // A4 page height mm
+      const imgH = (canvas.height / canvas.width) * pdfW; // maintain aspect ratio
+      // Add image across multiple pages if content is taller than one A4 page
+      let yPos = 0;
+      let remaining = imgH;
+      while (remaining > 0) {
+        pdf.addImage(imgData, "PNG", 0, yPos, pdfW, imgH);
+        remaining -= pdfPageH;
+        if (remaining > 0) { pdf.addPage(); yPos = -(imgH - remaining); }
+      }
       const filename = `${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`;
       const blob = pdf.output("blob");
       const url = URL.createObjectURL(blob);
@@ -343,7 +354,7 @@ export default function EditorPage() {
 
         <UsageBanner />
 
-        {/* Visible scaled preview — id used by html2canvas for PDF export */}
+        {/* Visible scaled preview */}
         <div style={{
           transform: `scale(${previewScale})`,
           transformOrigin: "top center",
@@ -351,9 +362,7 @@ export default function EditorPage() {
           boxShadow: "0 8px 48px rgba(0,0,0,0.18)",
           borderRadius: 2,
         }}>
-          <div id="resume-preview">
-            <TemplateComponent data={resumeData} />
-          </div>
+          <TemplateComponent data={resumeData} />
         </div>
       </main>
 
@@ -465,6 +474,11 @@ export default function EditorPage() {
           )}
         </aside>
       )}
+
+      {/* Hidden full-size resume for PDF capture — outside all transforms/overflow */}
+      <div id="resume-preview" style={{ position: "fixed", top: 0, left: "-9999px", width: 794, pointerEvents: "none" }}>
+        <TemplateComponent data={resumeData} />
+      </div>
     </div>
   );
 }
