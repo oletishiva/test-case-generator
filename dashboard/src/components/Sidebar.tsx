@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, TestTube, Settings, Zap, BookOpen } from "lucide-react";
+import { LayoutDashboard, TestTube, Settings, Zap, BookOpen, FileText } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/test-cases", label: "Test Cases",  icon: TestTube },
-  { href: "/library",    label: "Library",     icon: BookOpen },
-  { href: "/settings",   label: "Settings",    icon: Settings },
+  { href: "/dashboard",      label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/test-cases",     label: "Test Cases",    icon: TestTube },
+  { href: "/library",        label: "Library",       icon: BookOpen },
+  { href: "/resume-builder", label: "Resume Builder", icon: FileText },
+  { href: "/settings",       label: "Settings",      icon: Settings },
 ];
 
 export function Sidebar() {
