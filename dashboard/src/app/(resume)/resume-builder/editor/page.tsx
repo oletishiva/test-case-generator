@@ -303,7 +303,7 @@ export default function EditorPage() {
         <UsageBanner />
 
         {/* Hidden full-size resume used by html2canvas for PDF export */}
-        <div id="resume-preview" style={{ position: "fixed", left: "-9999px", top: 0, width: 794, pointerEvents: "none", zIndex: -1 }}>
+        <div id="resume-preview" style={{ position: "fixed", top: 0, left: 0, width: 794, opacity: 0, pointerEvents: "none" }}>
           <TemplateComponent data={resumeData} />
         </div>
 
