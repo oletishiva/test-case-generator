@@ -7,7 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import {
   Download, Sparkles, FileText, LayoutTemplate,
-  ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight,
+  ArrowLeft, ChevronLeft, ChevronRight,
   Save,
 } from "lucide-react";
 import type { ResumeData, AtsScore } from "@/types/resume";
@@ -161,24 +161,27 @@ export default function EditorPage() {
 
   /* ── PDF download ─────────────────────────────────────── */
   async function downloadPdf() {
-    const plan = user?.publicMetadata?.plan as string | undefined;
-    if (!plan || plan === "free") {
-      toast.error("PDF download requires Pro plan. Upgrade to unlock!", { duration: 4000 });
-      return;
-    }
     try {
+      toast("Generating PDF…", { duration: 2000 });
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"), import("jspdf"),
       ]);
       const el = document.getElementById("resume-preview");
-      if (!el) return;
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+      if (!el) { toast.error("Preview not ready, try again."); return; }
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        width: 794,
+        windowWidth: 794,
+      });
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
       pdf.save(`${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`);
       toast.success("Resume downloaded!");
-    } catch {
-      toast.error("Download failed. Please try again.");
+    } catch (err) {
+      toast.error("Download failed: " + (err instanceof Error ? err.message : String(err)));
     }
   }
 
@@ -243,7 +246,6 @@ export default function EditorPage() {
 
         <ToolBtn icon={Save}     label={saving ? "…" : "Save"} active={false} onClick={saveSession} />
         <ToolBtn icon={Download} label="Download" active={false} onClick={downloadPdf} />
-        <ToolBtn icon={CheckCircle2} label="Upgrade" active={false} onClick={() => toast("Upgrade to Pro for PDF export")} />
       </aside>
 
       {/* ══ CENTER: RESUME PREVIEW ═══════════════════════ */}
