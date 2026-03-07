@@ -32,16 +32,33 @@ function TemplateSkeleton({ bg }: { bg: string }) {
 }
 
 /* ── Scaled real template preview ─────────────────────────── */
-const CARD_W = 216;
-const CARD_H = 305;
-const SCALE  = CARD_W / 794;
+// Show 4 cards; ~262px each fits within 1100px container
+const CARD_W = 262;
+const SCALE  = CARD_W / 794;           // 0.33
+const CARD_H = Math.round(1123 * SCALE); // 371
 
-function RealPreview({ t }: { t: typeof TEMPLATES[0] }) {
+function RealPreview({ t, featured = false }: { t: typeof TEMPLATES[0]; featured?: boolean }) {
   const { Component } = t;
+  const w = featured ? CARD_W * 1.07 : CARD_W;
+  const h = featured ? CARD_H * 1.07 : CARD_H;
+  const sc = w / 794;
   return (
-    <div style={{ width: CARD_W, height: CARD_H, overflow: "hidden", borderRadius: 10, flexShrink: 0, background: "#111" }}>
-      <div style={{ transform: `scale(${SCALE})`, transformOrigin: "top left", width: 794, pointerEvents: "none" }}>
-        <Component data={SAMPLE_RESUME} />
+    /* White card wrapper — exactly like enhancv */
+    <div style={{
+      background: "#fff",
+      borderRadius: 16,
+      padding: 10,
+      boxShadow: featured
+        ? "0 24px 64px rgba(0,0,0,0.18)"
+        : "0 4px 24px rgba(0,0,0,0.10)",
+      border: "1px solid #e5e7eb",
+      transition: "box-shadow 0.25s, transform 0.25s",
+      flexShrink: 0,
+    }}>
+      <div style={{ width: w, height: h, overflow: "hidden", borderRadius: 8 }}>
+        <div style={{ transform: `scale(${sc})`, transformOrigin: "top left", width: 794, pointerEvents: "none" }}>
+          <Component data={SAMPLE_RESUME} />
+        </div>
       </div>
     </div>
   );
@@ -50,88 +67,79 @@ function RealPreview({ t }: { t: typeof TEMPLATES[0] }) {
 /* ── Template Carousel ─────────────────────────────────────── */
 function TemplateCarousel({ onSelect }: { onSelect: () => void }) {
   const [active, setActive] = useState(0);
-  const visible = 5;
+  const visible = 4;
+  const total = TEMPLATES.length;
+  const featuredOffset = 1; // second card is "center-featured"
 
   const prev = () => setActive(a => Math.max(0, a - 1));
-  const next = () => setActive(a => Math.min(TEMPLATES.length - visible, a + 1));
+  const next = () => setActive(a => Math.min(total - visible, a + 1));
 
   return (
-    <div style={{ position: "relative", padding: "0 48px" }}>
-      {/* Arrow left */}
+    <div style={{ position: "relative", padding: "20px 56px 8px" }}>
+      {/* Left arrow */}
       <button onClick={prev} disabled={active === 0}
-        style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 40, height: 40, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active === 0 ? "default" : "pointer", opacity: active === 0 ? 0.3 : 1, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-        <ChevronLeft style={{ width: 18, height: 18, color: "#374151" }} />
+        style={{ position: "absolute", left: 4, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active === 0 ? "default" : "pointer", opacity: active === 0 ? 0.25 : 1, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", transition: "opacity 0.2s" }}>
+        <ChevronLeft style={{ width: 20, height: 20, color: "#374151" }} />
       </button>
 
-      {/* Cards */}
-      <div style={{ display: "flex", gap: 14, overflow: "hidden" }}>
+      {/* Cards row */}
+      <div style={{ display: "flex", gap: 18, alignItems: "flex-end", justifyContent: "center" }}>
         {TEMPLATES.map((t, i) => {
           const offset = i - active;
           if (offset < 0 || offset >= visible) return null;
+          const featured = offset === featuredOffset;
           return (
             <motion.div key={t.id}
-              whileHover={{ y: -10, scale: 1.02 }}
-              transition={{ duration: 0.2 }}
+              animate={{ y: featured ? -14 : 0 }}
+              whileHover={{ y: featured ? -20 : -8, scale: 1.02 }}
+              transition={{ duration: 0.22 }}
               onClick={onSelect}
-              style={{ cursor: "pointer", flexShrink: 0, position: "relative" }}
+              style={{ cursor: "pointer", position: "relative" }}
             >
-              <div style={{
-                borderRadius: 12, overflow: "hidden",
-                border: "2px solid #e5e7eb",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "border-color 0.2s, box-shadow 0.2s",
-              }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = t.accent;
-                  (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 40px ${t.accent}33`;
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "#e5e7eb";
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)";
-                }}
-              >
-                <RealPreview t={t} />
-              </div>
+              <RealPreview t={t} featured={featured} />
 
-              {/* Hover overlay */}
-              <div className="template-hover-overlay" style={{
-                position: "absolute", inset: 0, borderRadius: 10,
-                background: "rgba(0,0,0,0)", transition: "background 0.2s",
-                display: "flex", alignItems: "flex-end", padding: 10,
-              }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0.45)"}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(0,0,0,0)"}
+              {/* Hover CTA button */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                whileHover={{ opacity: 1, y: 0 }}
+                style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0,
+                  display: "flex", justifyContent: "center", paddingBottom: 14,
+                }}
               >
-                <div style={{ width: "100%", opacity: 0, transition: "opacity 0.2s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                >
-                  <div style={{ background: t.accent, color: "#000", fontWeight: 700, fontSize: 11, borderRadius: 6, padding: "6px 0", textAlign: "center", width: "100%" }}>
-                    Use this template →
-                  </div>
+                <div style={{
+                  background: t.accent, color: t.accent === "#C9A84C" || t.accent === "#4CAF7D" ? "#000" : "#fff",
+                  fontWeight: 700, fontSize: 12, borderRadius: 8,
+                  padding: "9px 20px", whiteSpace: "nowrap",
+                  boxShadow: `0 4px 16px ${t.accent}55`,
+                }}>
+                  Use this template →
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Label */}
-              <div style={{ paddingTop: 8, textAlign: "center" }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#111827", margin: 0 }}>{t.name}</p>
-                <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0" }}>{t.role}</p>
+              {/* Label below card */}
+              <div style={{ paddingTop: 12, textAlign: "center" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>{t.name}</p>
+                <p style={{ fontSize: 11, color: "#9ca3af", margin: "3px 0 0" }}>{t.role}</p>
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Arrow right */}
-      <button onClick={next} disabled={active >= TEMPLATES.length - visible}
-        style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 40, height: 40, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active >= TEMPLATES.length - visible ? "default" : "pointer", opacity: active >= TEMPLATES.length - visible ? 0.3 : 1, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-        <ChevronRight style={{ width: 18, height: 18, color: "#374151" }} />
+      {/* Right arrow */}
+      <button onClick={next} disabled={active >= total - visible}
+        style={{ position: "absolute", right: 4, top: "46%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: active >= total - visible ? "default" : "pointer", opacity: active >= total - visible ? 0.25 : 1, boxShadow: "0 4px 12px rgba(0,0,0,0.12)", transition: "opacity 0.2s" }}>
+        <ChevronRight style={{ width: 20, height: 20, color: "#374151" }} />
       </button>
 
       {/* Dots */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 20 }}>
+      <div style={{ display: "flex", justifyContent: "center", gap: 7, marginTop: 24 }}>
         {TEMPLATES.map((_, i) => (
-          <button key={i} onClick={() => setActive(Math.min(i, TEMPLATES.length - visible))}
-            style={{ width: i === active ? 20 : 8, height: 8, borderRadius: 99, border: "none", cursor: "pointer", background: i === active ? "#C9A84C" : "#d1d5db", transition: "all 0.2s", padding: 0 }} />
+          <button key={i}
+            onClick={() => setActive(Math.min(i, total - visible))}
+            style={{ width: i === active ? 24 : 8, height: 8, borderRadius: 99, border: "none", cursor: "pointer", background: i === active ? "#C9A84C" : "#d1d5db", transition: "all 0.25s", padding: 0 }}
+          />
         ))}
       </div>
     </div>
