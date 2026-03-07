@@ -187,14 +187,12 @@ export default function EditorPage() {
 
       toast("Rendering…", { duration: 6000 });
       const canvas = await html2canvas(el, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
         onclone: (clonedDoc) => {
-          // html2canvas can't parse oklch()/lab() colors from globals.css.
-          // Templates use only inline styles so replacing these in the clone is safe.
           clonedDoc.querySelectorAll("style").forEach((style) => {
             if (style.textContent) {
               style.textContent = style.textContent
@@ -213,33 +211,39 @@ export default function EditorPage() {
       // Free users get a watermark banner at the bottom
       if (!isPro) {
         const ctx = canvas.getContext("2d")!;
-        const bh = 56;
-        // Blue banner
+        const bh = Math.round(canvas.width * 0.07);
         ctx.fillStyle = "rgba(37, 99, 235, 0.92)";
         ctx.fillRect(0, canvas.height - bh, canvas.width, bh);
-        // Main text
         ctx.fillStyle = "#ffffff";
         ctx.font = `bold ${Math.round(canvas.width * 0.022)}px Arial, sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText("✦ Created with AITestCraft Resume Builder", canvas.width / 2, canvas.height - bh + 22);
-        // Sub text
+        ctx.fillText("✦ Created with AITestCraft Resume Builder", canvas.width / 2, canvas.height - bh + Math.round(bh * 0.4));
         ctx.font = `${Math.round(canvas.width * 0.016)}px Arial, sans-serif`;
         ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillText("Upgrade to Pro for watermark-free PDF  ·  ai-testcraft.vercel.app", canvas.width / 2, canvas.height - bh + 44);
+        ctx.fillText("Upgrade to Pro for watermark-free PDF  ·  ai-testcraft.vercel.app", canvas.width / 2, canvas.height - bh + Math.round(bh * 0.75));
       }
 
       const pdf = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdfW = 210; // A4 width mm
+      const pdfW = 210;   // A4 width mm
       const pdfPageH = 297; // A4 page height mm
-      const imgH = (canvas.height / canvas.width) * pdfW; // maintain aspect ratio
-      // Add image across multiple pages if content is taller than one A4 page
-      let yPos = 0;
-      let remaining = imgH;
-      while (remaining > 0) {
-        pdf.addImage(imgData, "PNG", 0, yPos, pdfW, imgH);
-        remaining -= pdfPageH;
-        if (remaining > 0) { pdf.addPage(); yPos = -(imgH - remaining); }
+      // px per mm based on canvas width mapped to A4 width
+      const pxPerMm = canvas.width / pdfW;
+      const pageHeightPx = pdfPageH * pxPerMm;
+      const totalPages = Math.ceil(canvas.height / pageHeightPx);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        // Crop canvas slice for this page
+        const srcY = Math.round(page * pageHeightPx);
+        const srcH = Math.min(Math.round(pageHeightPx), canvas.height - srcY);
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = srcH;
+        const pCtx = pageCanvas.getContext("2d")!;
+        pCtx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.82);
+        const sliceH = srcH / pxPerMm;
+        pdf.addImage(pageImgData, "JPEG", 0, 0, pdfW, sliceH);
       }
       const filename = `${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`;
       const blob = pdf.output("blob");
