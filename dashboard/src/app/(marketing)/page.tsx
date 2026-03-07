@@ -24,6 +24,7 @@ const navLinks = [
     items: ["QA Engineers", "Dev Teams", "Agile / Scrum", "CI/CD Integration"],
   },
   { label: "Pricing", items: [] },
+  { label: "Blog", items: [] },
   { label: "Docs", items: [] },
 ];
 
@@ -195,13 +196,20 @@ const footerCols = [
 ];
 
 /* ─── Nav dropdown ────────────────────────────────────────── */
+const NAV_ROUTES: Record<string, string> = {
+  Pricing: "/pricing",
+  Blog: "/blog",
+  Docs: "/docs",
+};
+
 function NavDropdown({ label, items }: { label: string; items: string[] }) {
   const [open, setOpen] = useState(false);
   if (!items.length) {
+    const href = NAV_ROUTES[label] ?? "#";
     return (
-      <a href="#" className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+      <Link href={href} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors">
         {label}
-      </a>
+      </Link>
     );
   }
   return (
