@@ -11,5 +11,5 @@ export async function GET() {
   }
 
   const usage = await getUsageSummary(userId);
-  return NextResponse.json({ usage });
+  return NextResponse.json({ usage, userId });
 }

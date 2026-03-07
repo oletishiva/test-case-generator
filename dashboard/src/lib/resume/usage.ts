@@ -3,10 +3,16 @@ import { supabaseAdmin } from "@/lib/supabase";
 export type ResumeAction = "parse" | "enhance" | "ats-score";
 
 const FREE_LIMITS: Record<ResumeAction, number> = {
-  parse: 3,
-  enhance: 2,
-  "ats-score": 3,
+  parse: 5,
+  enhance: 3,
+  "ats-score": 5,
 };
+
+// Comma-separated Clerk user IDs that bypass all limits (set in Vercel env)
+const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 /** Returns { allowed: true } or { allowed: false, used, limit } */
 export async function checkAndIncrementUsage(
@@ -16,8 +22,8 @@ export async function checkAndIncrementUsage(
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const limit = FREE_LIMITS[action];
 
-  // Pro plan users are not rate-limited
-  if (plan && plan !== "free") {
+  // Admin users and pro plan users are never rate-limited
+  if (ADMIN_USER_IDS.includes(userId) || (plan && plan !== "free")) {
     return { allowed: true, used: 0, limit };
   }
 
