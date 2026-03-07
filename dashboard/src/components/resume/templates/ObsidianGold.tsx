@@ -6,7 +6,7 @@ export default function ObsidianGold({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "'DM Sans', sans-serif",
       background: "#0e0e16",
       color: "#ffffff",

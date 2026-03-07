@@ -6,7 +6,7 @@ export default function EditorialBloom({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "'DM Sans', sans-serif",
       background: "#faf8f4",
       color: "#1a1a1a",

@@ -7,7 +7,7 @@ export default function ClassicWhite({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "Georgia, 'Times New Roman', serif",
       background: "#ffffff",
       color: "#1a1a1a",

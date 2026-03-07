@@ -480,7 +480,7 @@ export default function EditorPage() {
       )}
 
       {/* Hidden full-size resume for PDF capture — outside all transforms/overflow */}
-      <div id="resume-preview" style={{ position: "fixed", top: 0, left: "-9999px", width: 794, pointerEvents: "none" }}>
+      <div id="resume-preview" style={{ position: "fixed", top: "-9999px", left: 0, width: 794, pointerEvents: "none" }}>
         <TemplateComponent data={resumeData} />
       </div>
     </div>

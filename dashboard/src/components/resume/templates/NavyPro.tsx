@@ -9,7 +9,7 @@ export default function NavyPro({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "Arial, Helvetica, sans-serif",
       background: "#ffffff",
       color: "#1a1a1a",

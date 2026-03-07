@@ -6,7 +6,7 @@ export default function SteelPro({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "'DM Sans', sans-serif",
       background: "#111827",
       color: "#f9fafb",

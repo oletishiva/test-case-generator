@@ -6,7 +6,7 @@ export default function MintFresh({ data }: { data: ResumeData }) {
   const p = data.personalInfo;
 
   return (
-    <div id="resume-preview" style={{
+    <div style={{
       fontFamily: "'DM Sans', sans-serif",
       background: "#f6fef9",
       color: "#1a2e23",
