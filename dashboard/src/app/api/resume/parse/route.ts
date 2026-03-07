@@ -37,11 +37,29 @@ export async function POST(req: NextRequest) {
 
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Dynamically import pdf-parse to avoid build-time issues
+      // Custom page renderer — avoids canvas/DOMMatrix APIs (Node.js has none)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async function pageRenderTextOnly(pageData: any): Promise<string> {
+        return pageData
+          .getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then((textContent: any) => {
+            let lastY: number | undefined;
+            let text = "";
+            for (const item of textContent.items) {
+              const y = item.transform?.[5];
+              if (lastY !== undefined && lastY !== y) text += "\n";
+              text += item.str;
+              lastY = y;
+            }
+            return text;
+          });
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfModule = await import("pdf-parse") as any;
       const pdfParse = pdfModule.default ?? pdfModule;
-      const pdfData = await pdfParse(buffer);
+      const pdfData = await pdfParse(buffer, { pagerender: pageRenderTextOnly });
       resumeText = pdfData.text;
     } else if (pastedText) {
       resumeText = pastedText;
