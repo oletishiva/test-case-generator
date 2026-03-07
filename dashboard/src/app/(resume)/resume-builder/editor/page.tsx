@@ -163,6 +163,9 @@ export default function EditorPage() {
   async function downloadPdf() {
     try {
       toast("Generating PDF…", { duration: 2000 });
+      const plan = user?.publicMetadata?.plan as string | undefined;
+      const isPro = plan === "pro" || plan === "admin";
+
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"), import("jspdf"),
       ]);
@@ -176,10 +179,29 @@ export default function EditorPage() {
         width: 794,
         windowWidth: 794,
       });
+
+      // Free users get a watermark banner at the bottom
+      if (!isPro) {
+        const ctx = canvas.getContext("2d")!;
+        const bh = 56;
+        // Blue banner
+        ctx.fillStyle = "rgba(37, 99, 235, 0.92)";
+        ctx.fillRect(0, canvas.height - bh, canvas.width, bh);
+        // Main text
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${Math.round(canvas.width * 0.022)}px Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("✦ Created with AITestCraft Resume Builder", canvas.width / 2, canvas.height - bh + 22);
+        // Sub text
+        ctx.font = `${Math.round(canvas.width * 0.016)}px Arial, sans-serif`;
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillText("Upgrade to Pro for watermark-free PDF  ·  ai-testcraft.vercel.app", canvas.width / 2, canvas.height - bh + 44);
+      }
+
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
       pdf.save(`${resumeData.personalInfo.name.replace(/\s/g, "_")}_Resume.pdf`);
-      toast.success("Resume downloaded!");
+      toast.success(isPro ? "Resume downloaded!" : "Resume downloaded! Upgrade to Pro to remove watermark.");
     } catch (err) {
       toast.error("Download failed: " + (err instanceof Error ? err.message : String(err)));
     }
