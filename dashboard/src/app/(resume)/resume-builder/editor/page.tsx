@@ -278,7 +278,12 @@ export default function EditorPage() {
 
         <UsageBanner />
 
-        {/* The resume — white page on gray background */}
+        {/* Hidden full-size resume used by html2canvas for PDF export */}
+        <div id="resume-preview" style={{ position: "fixed", left: "-9999px", top: 0, width: 794, pointerEvents: "none", zIndex: -1 }}>
+          <TemplateComponent data={resumeData} />
+        </div>
+
+        {/* Visible scaled preview */}
         <div style={{
           transform: `scale(${previewScale})`,
           transformOrigin: "top center",
@@ -345,6 +350,48 @@ export default function EditorPage() {
                       style={{ width: "100%", marginBottom: 4, borderRadius: 5, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", padding: "5px 8px", fontSize: 10, resize: "none", outline: "none", boxSizing: "border-box", lineHeight: 1.5 }}
                     />
                   ))}
+                </div>
+              ))}
+
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em", margin: "18px 0 12px" }}>
+                Skills
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                {resumeData.skills.map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", padding: "4px 8px" }}>
+                    <input
+                      value={s.name}
+                      onChange={e => setResumeData(d => ({ ...d, skills: d.skills.map((sk, si) => si === i ? { ...sk, name: e.target.value } : sk) }))}
+                      style={{ border: "none", background: "transparent", fontSize: 11, color: "#111827", outline: "none", width: 80 }}
+                    />
+                    <select
+                      value={s.level}
+                      onChange={e => setResumeData(d => ({ ...d, skills: d.skills.map((sk, si) => si === i ? { ...sk, level: Number(e.target.value) as 1|2|3|4|5 } : sk) }))}
+                      style={{ border: "none", background: "transparent", fontSize: 10, color: "#2563eb", outline: "none", cursor: "pointer" }}
+                    >
+                      {[1,2,3,4,5].map(n => <option key={n} value={n}>{"★".repeat(n)}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.08em", margin: "18px 0 12px" }}>
+                Education
+              </p>
+              {resumeData.education.map((ed, i) => (
+                <div key={i} style={{ marginBottom: 10, padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                  <input value={ed.degree} placeholder="Degree"
+                    onChange={e => setResumeData(d => ({ ...d, education: d.education.map((x, j) => j === i ? { ...x, degree: e.target.value } : x) }))}
+                    style={{ width: "100%", marginBottom: 4, border: "1px solid #e5e7eb", borderRadius: 5, background: "#fff", color: "#111827", padding: "5px 8px", fontSize: 11, outline: "none", boxSizing: "border-box" }}
+                  />
+                  <input value={ed.institution} placeholder="Institution"
+                    onChange={e => setResumeData(d => ({ ...d, education: d.education.map((x, j) => j === i ? { ...x, institution: e.target.value } : x) }))}
+                    style={{ width: "100%", marginBottom: 4, border: "1px solid #e5e7eb", borderRadius: 5, background: "#fff", color: "#374151", padding: "5px 8px", fontSize: 11, outline: "none", boxSizing: "border-box" }}
+                  />
+                  <input value={ed.year} placeholder="Year"
+                    onChange={e => setResumeData(d => ({ ...d, education: d.education.map((x, j) => j === i ? { ...x, year: e.target.value } : x) }))}
+                    style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 5, background: "#fff", color: "#6b7280", padding: "5px 8px", fontSize: 11, outline: "none", boxSizing: "border-box" }}
+                  />
                 </div>
               ))}
             </div>

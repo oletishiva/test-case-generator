@@ -12,7 +12,7 @@ import { SAMPLE_RESUME } from "@/lib/resume/parser";
 import UsageBanner from "@/components/resume/UsageBanner";
 
 /* ── Types ──────────────────────────────────────────────────── */
-type Panel = 1 | 2 | 3;
+type Panel = 1 | 2;
 
 const PARSE_STEPS = [
   "Extracting your experience...",
@@ -203,7 +203,7 @@ export default function UploadPage() {
 
         {/* Stepper header */}
         <div className="mb-10 flex items-center justify-center gap-3">
-          {([1, 2, 3] as Panel[]).map((n) => (
+          {([1, 2] as Panel[]).map((n) => (
             <div key={n} className="flex items-center gap-3">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-all"
@@ -217,9 +217,9 @@ export default function UploadPage() {
                 {panel > n ? <CheckCircle2 className="h-4 w-4" /> : n}
               </div>
               <span className="hidden text-xs text-slate-400 sm:block">
-                {n === 1 ? "Upload" : n === 2 ? "Review & Enhance" : "Confirm"}
+                {n === 1 ? "Upload" : "Review & Enhance"}
               </span>
-              {n < 3 && <div className="h-px w-8 bg-white/10" />}
+              {n < 2 && <div className="h-px w-8 bg-white/10" />}
             </div>
           ))}
         </div>
@@ -500,62 +500,10 @@ export default function UploadPage() {
                   className="rounded-xl border border-white/10 px-6 py-3 text-sm text-slate-400 hover:bg-white/5 transition-colors">
                   ← Back
                 </button>
-                <button onClick={() => setPanel(3)}
+                <button onClick={handleConfirm}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold text-black"
                   style={{ background: "linear-gradient(135deg,#C9A84C,#E8C96A)" }}>
-                  Choose My Template <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── Panel 3: Confirm ─────────────────────────────────── */}
-          {panel === 3 && resumeData && (
-            <motion.div key="p3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div className="mb-2 flex items-center gap-3">
-                <CheckCircle2 className="h-6 w-6 text-yellow-400" />
-                <h2 className="text-2xl font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
-                  Looking good!
-                </h2>
-              </div>
-              <p className="mb-6 text-sm text-slate-400">Your resume is ready. Choose a template and download.</p>
-
-              {/* Summary card */}
-              <div className="mb-6 rounded-2xl border border-white/10 p-5" style={{ background: "#0f0f1a" }}>
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-bold text-white">{resumeData.personalInfo.name}</p>
-                    <p className="text-sm text-yellow-400">{resumeData.personalInfo.title}</p>
-                  </div>
-                  {isEnhanced && (
-                    <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs text-yellow-400">
-                      ✦ AI Enhanced
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  {[
-                    { n: resumeData.experience.length, l: "Roles" },
-                    { n: resumeData.skills.length, l: "Skills" },
-                    { n: resumeData.certifications.length, l: "Certs" },
-                  ].map(({ n, l }) => (
-                    <div key={l} className="rounded-xl border border-white/10 p-3">
-                      <p className="text-2xl font-bold" style={{ color: "#C9A84C" }}>{n}</p>
-                      <p className="text-xs text-slate-400">{l}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={() => setPanel(2)}
-                  className="rounded-xl border border-white/10 px-6 py-3 text-sm text-slate-400 hover:bg-white/5 transition-colors">
-                  ← Edit
-                </button>
-                <button onClick={handleConfirm}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl py-4 font-bold text-black text-base"
-                  style={{ background: "linear-gradient(135deg,#C9A84C,#E8C96A)" }}>
-                  Choose My Template <ArrowRight className="h-5 w-5" />
+                  Open in Editor <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             </motion.div>
