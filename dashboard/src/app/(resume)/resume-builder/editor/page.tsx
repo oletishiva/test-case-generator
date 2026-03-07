@@ -165,7 +165,6 @@ export default function EditorPage() {
     if (downloading) return;
     setDownloading(true);
     try {
-      toast("Generating PDF…", { duration: 6000 });
       const plan = user?.publicMetadata?.plan as string | undefined;
       const isPro = plan === "pro" || plan === "admin";
 
@@ -185,18 +184,24 @@ export default function EditorPage() {
         return;
       }
 
-      // Move element into viewport so html2canvas renders text correctly.
-      // z-index:-9999 hides it behind the main UI (which has a solid background).
+      // Negative z-index elements aren't fully composited — text metrics are
+      // wrong. We need the element in the visible stacking context so the
+      // browser renders fonts correctly. A full-screen overlay hides it from
+      // the user during capture.
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;inset:0;z-index:10000;background:#f3f4f6;display:flex;align-items:center;justify-content:center;";
+      overlay.innerHTML = '<p style="font-family:system-ui,sans-serif;font-size:14px;color:#374151;font-weight:600;">Generating PDF…</p>';
+      document.body.appendChild(overlay);
+
       const prevTop = el.style.top;
       const prevLeft = el.style.left;
       const prevZIndex = el.style.zIndex;
-      el.style.top = "0px";
-      el.style.left = "0px";
-      el.style.zIndex = "-9999";
-      // Two animation frames so the browser reflows text before capture
+      el.style.top = "0";
+      el.style.left = "0";
+      el.style.zIndex = "1"; // positive: browser computes text layout correctly
+      // Two frames for the browser to reflow and measure text
       await new Promise<void>(r => requestAnimationFrame(() => { requestAnimationFrame(() => r()); }));
 
-      toast("Rendering…", { duration: 6000 });
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(el, {
@@ -207,6 +212,8 @@ export default function EditorPage() {
           logging: false,
           scrollX: 0,
           scrollY: 0,
+          windowWidth: 794,
+          windowHeight: el.scrollHeight || 1123,
           onclone: (clonedDoc) => {
             clonedDoc.querySelectorAll("style").forEach((style) => {
               if (style.textContent) {
@@ -218,10 +225,10 @@ export default function EditorPage() {
           },
         });
       } finally {
-        // Always restore so the hidden element returns off-screen
         el.style.top = prevTop;
         el.style.left = prevLeft;
         el.style.zIndex = prevZIndex;
+        document.body.removeChild(overlay);
       }
 
       if (!canvas || canvas.width === 0) {
