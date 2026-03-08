@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 /* ─── Nav tools list ──────────────────────────────────────── */
 const NAV_TOOLS = [
   { label: "AI Test Generator", desc: "Generate tests from plain English", icon: Sparkles, href: "/dashboard" },
-  { label: "Locator Capture", desc: "Auto-generate robust selectors", icon: Target, href: "/dashboard" },
+  { label: "Locator Capture", desc: "Auto-generate robust selectors", icon: Target, href: "/tools/locators" },
   { label: "Test Data Generator", desc: "Create schema-aware test data", icon: Database, href: "/tools/test-data" },
   { label: "Resume Builder", desc: "ATS-optimised QA resumes", icon: FileText, href: "/resume-builder" },
   { label: "Code Converter", desc: "Translate across 50+ frameworks", icon: RefreshCw, href: "/dashboard" },
@@ -65,7 +65,7 @@ const TOOLS = [
     icon: Target,
     name: "Smart Locator Capture",
     desc: "Auto-generate robust XPath, CSS and data-testid selectors powered by AI. Selectors that survive UI changes.",
-    href: "/dashboard",
+    href: "/tools/locators",
     audience: "Teams & Candidates",
     audienceCls: "bg-blue-100 text-blue-700",
     color: "#2563eb",
@@ -179,7 +179,7 @@ const FOOTER_COLS = [
     heading: "Tools",
     links: [
       { label: "AI Test Generator", href: "/dashboard" },
-      { label: "Locator Capture", href: "/dashboard" },
+      { label: "Locator Capture", href: "/tools/locators" },
       { label: "Test Data Generator", href: "/tools/test-data" },
       { label: "Resume Builder", href: "/resume-builder" },
       { label: "Code Converter", href: "/dashboard" },
