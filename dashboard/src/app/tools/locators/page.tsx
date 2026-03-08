@@ -294,6 +294,8 @@ export default function LocatorsPage() {
   const [smokeVisible,  setSmokeVisible]  = useState(false);
   const [selectedRows,  setSelectedRows]  = useState<Set<string>>(new Set());
   const [copiedSel,     setCopiedSel]     = useState(false);
+  const [spaHelpOpen,   setSpaHelpOpen]   = useState(false);
+  const [copiedCmd,     setCopiedCmd]     = useState(false);
 
   const hasCode = code.trim().length > 0;
   const ext = language === "javascript" ? "js" : language === "python" ? "py" : language === "java" ? "java" : "ts";
@@ -370,6 +372,12 @@ export default function LocatorsPage() {
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyDevToolsCmd() {
+    await navigator.clipboard.writeText("copy(document.documentElement.outerHTML)");
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
   }
 
   /* Copy a locator row — normal, await, or lazy-getter style */
@@ -517,8 +525,11 @@ export default function LocatorsPage() {
               {mode === "html" && (
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <p style={{ fontSize: 12, color: "#475569", fontWeight: 600, margin: 0 }}>Paste HTML source or component snippet</p>
-                    <button onClick={() => setHtmlInput(HTML_EXAMPLE)} style={{ fontSize: 11, color: "#2dd4bf", background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontWeight: 600 }}>Load example</button>
+                    <div>
+                      <p style={{ fontSize: 12, color: "#475569", fontWeight: 600, margin: 0 }}>Paste HTML source or component snippet</p>
+                      <p style={{ fontSize: 11, color: "#94a3b8", margin: "2px 0 0" }}>Also works for SPAs — see URL tab for how to grab live page HTML</p>
+                    </div>
+                    <button onClick={() => setHtmlInput(HTML_EXAMPLE)} style={{ fontSize: 11, color: "#2dd4bf", background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontWeight: 600, flexShrink: 0, marginLeft: 8 }}>Load example</button>
                   </div>
                   <textarea value={htmlInput} onChange={(e) => setHtmlInput(e.target.value)} placeholder={`<form>\n  <label for="email">Email</label>\n  <input id="email" type="email" />\n</form>`} rows={11} style={{ width: "100%", fontSize: 12, fontFamily: "'Fira Code',monospace", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", lineHeight: 1.65, resize: "vertical", color: "#0f172a", outline: "none", background: "#f8fafc", boxSizing: "border-box" }} />
                   <p style={{ fontSize: 11, color: "#94a3b8", margin: "5px 0 0", textAlign: "right" }}>{htmlInput.length > 0 ? `${htmlInput.length.toLocaleString()} chars` : ""}</p>
@@ -531,6 +542,55 @@ export default function LocatorsPage() {
                   <div style={{ marginTop: 10, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 9, padding: "9px 12px", display: "flex", gap: 8 }}>
                     <AlertCircle style={{ width: 13, height: 13, color: "#d97706", flexShrink: 0, marginTop: 1 }} />
                     <p style={{ fontSize: 11, color: "#92400e", margin: 0, lineHeight: 1.5 }}>Works best with public pages. JS-heavy or login-gated sites may produce limited results.</p>
+                  </div>
+
+                  {/* SPA / Dynamic page helper */}
+                  <div style={{ marginTop: 10, border: "1px solid #e0e7ff", borderRadius: 9, overflow: "hidden" }}>
+                    <button
+                      onClick={() => setSpaHelpOpen(!spaHelpOpen)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: spaHelpOpen ? "#eef2ff" : "#f5f3ff", border: "none", cursor: "pointer" }}
+                    >
+                      <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, fontWeight: 700, color: "#4338ca" }}>
+                        <span style={{ fontSize: 13 }}>💡</span>
+                        SPA or dynamic page? URL won&apos;t work — use this instead
+                      </span>
+                      {spaHelpOpen
+                        ? <ChevronUp style={{ width: 12, height: 12, color: "#6366f1" }} />
+                        : <ChevronDown style={{ width: 12, height: 12, color: "#6366f1" }} />}
+                    </button>
+                    {spaHelpOpen && (
+                      <div style={{ padding: "12px 14px", background: "#fafbff", borderTop: "1px solid #e0e7ff" }}>
+                        <p style={{ fontSize: 11, color: "#475569", margin: "0 0 10px", lineHeight: 1.6 }}>
+                          Some sites (SPAs, React/Angular apps, post-login pages) always show the same URL
+                          even when you navigate. Server-side fetch only gets the <strong>initial HTML skeleton</strong> — not the rendered page.
+                        </p>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#1e1b4b", margin: "0 0 8px" }}>Grab the live HTML in 3 steps:</p>
+                        <ol style={{ margin: "0 0 10px", padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 5 }}>
+                          {[
+                            "Navigate to the exact page in your browser",
+                            "Open DevTools → Console  (F12 or Cmd+Option+J)",
+                            "Paste and run the command below, then switch to the HTML Source tab and Ctrl+V",
+                          ].map((step, i) => (
+                            <li key={i} style={{ fontSize: 11, color: "#475569", lineHeight: 1.55 }}>{step}</li>
+                          ))}
+                        </ol>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e1b4b", borderRadius: 8, padding: "9px 12px" }}>
+                          <code style={{ flex: 1, fontSize: 12, color: "#a5b4fc", fontFamily: "'Fira Code',monospace", wordBreak: "break-all" }}>
+                            copy(document.documentElement.outerHTML)
+                          </code>
+                          <button
+                            onClick={copyDevToolsCmd}
+                            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, background: copiedCmd ? "#16a34a" : "#4f46e5", color: "#fff", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", transition: "background 0.2s" }}
+                          >
+                            {copiedCmd ? <Check style={{ width: 12, height: 12 }} /> : <Copy style={{ width: 12, height: 12 }} />}
+                            {copiedCmd ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 10, color: "#94a3b8", margin: "7px 0 0", lineHeight: 1.5 }}>
+                          This copies the fully-rendered DOM to your clipboard. Paste it in the <strong>HTML Source</strong> tab and generate.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
