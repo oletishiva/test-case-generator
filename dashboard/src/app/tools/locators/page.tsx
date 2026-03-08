@@ -13,7 +13,7 @@ import {
 type InputMode  = "html" | "url" | "describe";
 type Framework  = "playwright" | "cypress" | "selenium";
 type Strategy   = "role" | "text" | "label" | "placeholder" | "testid" | "css";
-type Language   = "typescript" | "javascript";
+type Language   = "typescript" | "javascript" | "python" | "java";
 
 interface ParsedLocator { name: string; type: string; args: string; fullExpr: string; category: "button" | "input" | "link" | "other"; }
 interface ParsedMethod  { name: string; params: string; }
@@ -55,6 +55,22 @@ function categoriseLocator(name: string, type: string, args: string): "button" |
   return "other";
 }
 
+/* ── Python ↔ JS method name mapping ────────────────────────── */
+const PYTHON_METHOD_MAP: Record<string, string> = {
+  get_by_label: "getByLabel", get_by_role: "getByRole",
+  get_by_placeholder: "getByPlaceholder", get_by_text: "getByText",
+  get_by_test_id: "getByTestId", get_by_alt_text: "getByAltText",
+  get_by_title: "getByTitle", locator: "locator",
+};
+/** camelCase type → Python method name */
+function toPythonMethod(type: string): string {
+  return Object.entries(PYTHON_METHOD_MAP).find(([, v]) => v === type)?.[0] ?? type;
+}
+/** camelCase → snake_case */
+function camelToSnake(str: string): string {
+  return str.replace(/([A-Z])/g, (m) => `_${m.toLowerCase()}`);
+}
+
 /* ── Normalise raw args string from a matched line ───────────── */
 function cleanArgs(raw: string): string {
   // Remove trailing chained calls: .first(), .last(), .nth(n)
@@ -71,8 +87,65 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
   const methods:  ParsedMethod[]  = [];
   const seen = new Set<string>();
 
+  let pendingGetterName: string | null = null;
+  let pendingProperty = false; // for Python @property
+
   for (const line of code.split("\n")) {
-    // Pattern A — field initializer:  name = this.page.getByXxx(...)
+    // Python @property decorator
+    if (line.trim() === "@property") { pendingProperty = true; continue; }
+
+    // Python @property def: def name(self) -> ...: (after @property)
+    const fmPyDef = pendingProperty ? line.match(/^\s*def\s+(\w+)\s*\(self\)/) : null;
+    if (fmPyDef) {
+      pendingGetterName = fmPyDef[1];
+      pendingProperty = false;
+      continue;
+    }
+    if (pendingProperty) pendingProperty = false; // reset if non-matching line
+
+    // Pattern C-single — single-line TS getter: get name(): Locator { return this.page.getByXxx(...) }
+    const fmCSingle = line.match(
+      /^\s*get\s+(\w+)\s*\(\s*\)(?:\s*:\s*\w+)?\s*\{\s*return\s+this\.page\.(getBy\w+|locator)\((.*)$/
+    );
+    if (fmCSingle) {
+      const [, name, type, rest] = fmCSingle;
+      if (!seen.has(`L:${name}`)) {
+        seen.add(`L:${name}`);
+        const args = cleanArgs(rest);
+        locators.push({ name, type, args, fullExpr: `this.page.${type}(${args})`, category: categoriseLocator(name, type, args) });
+      }
+      pendingGetterName = null;
+      continue;
+    }
+
+    // Pattern C1 — TS getter opening: get name(): Locator {
+    const fmC1 = line.match(/^\s*get\s+(\w+)\s*\(\s*\)(?:\s*:\s*\w+)?\s*\{/);
+    if (fmC1) { pendingGetterName = fmC1[1]; continue; }
+
+    // Pattern C1b — Java lazy getter: public Locator fieldName() {
+    const fmC1b = line.match(/^\s*public\s+Locator\s+(\w+)\s*\(\s*\)\s*\{/);
+    if (fmC1b) { pendingGetterName = fmC1b[1]; continue; }
+
+    // Pattern C2 — return inside any getter (TS/JS/Java/Python)
+    //   TS/Java: return this.page.getByXxx(...) or return page.getByXxx(...)
+    //   Python:  return self.page.get_by_xxx(...)
+    const fmC2 = line.match(
+      /^\s*return\s+(?:self\.page|(?:this\.)?page)\.(get_by_\w+|getBy\w+|locator)\((.*)$/
+    );
+    if (fmC2 && pendingGetterName) {
+      const name = pendingGetterName;
+      pendingGetterName = null;
+      const [, rawMethod, rest] = fmC2;
+      const type = PYTHON_METHOD_MAP[rawMethod] ?? rawMethod;
+      if (!seen.has(`L:${name}`)) {
+        seen.add(`L:${name}`);
+        const args = cleanArgs(rest);
+        locators.push({ name, type, args, fullExpr: `this.page.${type}(${args})`, category: categoriseLocator(name, type, args) });
+      }
+      continue;
+    }
+
+    // Pattern A — TS/JS field initializer:  name = this.page.getByXxx(...)
     const fmA = line.match(
       /^\s*(?:(?:private|public|protected)\s+)?(?:readonly\s+)?(\w+)\s*=\s*this\.page\.(getBy\w+|locator)\((.*)$/
     );
@@ -81,10 +154,16 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
     const fmB = !fmA && line.match(
       /^\s*this\.(\w+)\s*=\s*(?:this\.)?page\.(getBy\w+|locator)\((.*)$/
     );
+    // Pattern D — Python field: self.name = page.get_by_xxx(...)
+    const fmD = !fmA && !fmB && line.match(
+      /^\s*self\.(\w+)\s*=\s*(?:self\.)?page\.(get_by_\w+|locator)\((.*)$/
+    );
 
-    const fm = fmA ?? fmB;
+    const fm = fmA ?? fmB ?? fmD;
     if (fm) {
-      const [, name, type, rest] = fm;
+      pendingGetterName = null;
+      const [, name, rawMethod, rest] = fm;
+      const type = PYTHON_METHOD_MAP[rawMethod] ?? rawMethod;
       if (!seen.has(`L:${name}`)) {
         seen.add(`L:${name}`);
         const args = cleanArgs(rest);
@@ -97,9 +176,12 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
       continue;
     }
 
-    const mm = line.match(/^\s*async\s+(\w+)\s*\(([^)]*)\)/);
+    // Method detection — async (TS/JS), def (Python), public void/Locator (Java)
+    const mm = line.match(/^\s*async\s+(\w+)\s*\(([^)]*)\)/)
+      ?? line.match(/^\s*def\s+([a-z]\w+)\s*\(self(?:,\s*([^)]*))?\)/)
+      ?? line.match(/^\s*public\s+(?:void|boolean|String|int)\s+(\w+)\s*\(([^)]*)\)/);
     if (mm) {
-      const [, name, params] = mm;
+      const [, name, params = ""] = mm;
       if (!seen.has(`M:${name}`)) { seen.add(`M:${name}`); methods.push({ name, params }); }
     }
   }
@@ -109,6 +191,15 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
 /* ── Build a smoke test snippet from locators ───────────────── */
 function buildSmokeTest(className: string | null, locators: ParsedLocator[], language: Language): string {
   const cn = className ?? "GeneratedPage";
+  if (language === "python") {
+    const snakeCn = camelToSnake(cn);
+    const fields = locators.slice(0, 5).map(l => `    expect(po.${l.name}).to_be_visible()`).join("\n");
+    return `import pytest\nfrom playwright.sync_api import Page, expect\nfrom ${cn} import ${cn}\n\ndef test_smoke_${snakeCn}(page: Page):\n    po = ${cn}(page)\n${fields}`;
+  }
+  if (language === "java") {
+    const fields = locators.slice(0, 5).map(l => `        assertThat(po.${l.name}).isVisible();`).join("\n");
+    return `import com.microsoft.playwright.*;\nimport static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;\nimport org.junit.jupiter.api.Test;\n\npublic class ${cn}Test {\n    @Test\n    void smokeTest(Page page) {\n        ${cn} po = new ${cn}(page);\n${fields}\n    }\n}`;
+  }
   const fields = locators.slice(0, 5).map(l => `  await expect(po.${l.name}).toBeVisible();`).join("\n");
   if (language === "javascript") {
     return `const { test, expect } = require('@playwright/test');\nconst { ${cn} } = require('./${cn}');\n\ntest('smoke test — ${cn}', async ({ page }) => {\n  const po = new ${cn}(page);\n${fields}\n});`;
@@ -130,6 +221,13 @@ const FRAMEWORKS: { value: Framework; label: string; color: string }[] = [
   { value: "playwright", label: "Playwright", color: "#2dd4bf" },
   { value: "cypress",    label: "Cypress",    color: "#10b981" },
   { value: "selenium",   label: "Selenium",   color: "#f59e0b" },
+];
+
+const LANG_OPTIONS: { value: Language; label: string; color: string }[] = [
+  { value: "typescript", label: "TypeScript", color: "#6366f1" },
+  { value: "javascript", label: "JavaScript", color: "#f59e0b" },
+  { value: "python",     label: "Python",     color: "#3b82f6" },
+  { value: "java",       label: "Java",       color: "#ef4444" },
 ];
 
 const HTML_EXAMPLE = `<form>
@@ -179,6 +277,7 @@ export default function LocatorsPage() {
   const [groupPOM,      setGroupPOM]      = useState(true);
   const [includeActions,       setIncludeActions]      = useState(true);
   const [includeDynamic,       setIncludeDynamic]      = useState(false);
+  const [lazyInit,             setLazyInit]            = useState(false);
   const [ignoreSections,       setIgnoreSections]      = useState("");
   const [ignoreOpen,    setIgnoreOpen]    = useState(false);
   /* output state */
@@ -197,10 +296,10 @@ export default function LocatorsPage() {
   const [copiedSel,     setCopiedSel]     = useState(false);
 
   const hasCode = code.trim().length > 0;
-  const ext = language === "javascript" ? "js" : "ts";
+  const ext = language === "javascript" ? "js" : language === "python" ? "py" : language === "java" ? "java" : "ts";
 
   const className = (() => {
-    const m = code.match(/export\s+(?:default\s+)?class\s+(\w+)/);
+    const m = code.match(/(?:export\s+(?:default\s+)?class|public\s+class|^class)\s+(\w+)/m);
     return m ? m[1] : null;
   })();
 
@@ -243,6 +342,7 @@ export default function LocatorsPage() {
           includeActions,
           includeDynamicLocators: includeDynamic,
           ignoreSections,
+          lazyInit,
         }),
       });
       const json = await res.json();
@@ -272,9 +372,24 @@ export default function LocatorsPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  /* Copy a locator row — normal or "with await" (SelectorsHub style) */
+  /* Copy a locator row — normal, await, or lazy-getter style */
   function getRowCopyText(row: ParsedLocator): string {
-    if (awaitMode) return `const ${row.name} = await this.page.${row.type}(${row.args});`;
+    if (awaitMode && (language === "typescript" || language === "javascript"))
+      return `const ${row.name} = await this.page.${row.type}(${row.args});`;
+    if (language === "python") {
+      const m = toPythonMethod(row.type);
+      if (lazyInit) return `@property\ndef ${row.name}(self) -> Locator:\n    return self.page.${m}(${row.args})`;
+      return `self.page.${m}(${row.args})`;
+    }
+    if (language === "java") {
+      if (lazyInit) return `public Locator ${row.name}() {\n    return page.${row.type}(${row.args});\n}`;
+      return `page.${row.type}(${row.args})`;
+    }
+    if (lazyInit) {
+      return language === "javascript"
+        ? `get ${row.name}() {\n  return this.page.${row.type}(${row.args});\n}`
+        : `get ${row.name}(): Locator {\n  return this.page.${row.type}(${row.args});\n}`;
+    }
     return row.fullExpr;
   }
 
@@ -291,11 +406,27 @@ export default function LocatorsPage() {
 
   async function copySelected() {
     const rows = parsedLocators.filter(l => selectedRows.has(l.name));
-    const lines = rows.map(r =>
-      language === "javascript"
+    const lines = rows.map(r => {
+      if (language === "python") {
+        const m = toPythonMethod(r.type);
+        if (lazyInit)
+          return `    @property\n    def ${r.name}(self) -> Locator:\n        return self.page.${m}(${r.args})`;
+        return `        self.${r.name} = self.page.${m}(${r.args})`;
+      }
+      if (language === "java") {
+        if (lazyInit)
+          return `    public Locator ${r.name}() {\n        return page.${r.type}(${r.args});\n    }`;
+        return `        this.${r.name} = page.${r.type}(${r.args});`;
+      }
+      if (lazyInit) {
+        return language === "javascript"
+          ? `  get ${r.name}() {\n    return this.page.${r.type}(${r.args});\n  }`
+          : `  get ${r.name}(): Locator {\n    return this.page.${r.type}(${r.args});\n  }`;
+      }
+      return language === "javascript"
         ? `  this.${r.name} = this.page.${r.type}(${r.args});`
-        : `  private readonly ${r.name} = this.page.${r.type}(${r.args});`
-    ).join("\n");
+        : `  private readonly ${r.name} = this.page.${r.type}(${r.args});`;
+    }).join("\n");
     await navigator.clipboard.writeText(lines);
     setCopiedSel(true);
     setTimeout(() => setCopiedSel(false), 2000);
@@ -455,10 +586,10 @@ export default function LocatorsPage() {
             {/* Language */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "block", marginBottom: 7 }}>Language</label>
-              <div style={{ display: "flex", gap: 7 }}>
-                {(["typescript", "javascript"] as Language[]).map((lang) => (
-                  <button key={lang} onClick={() => setLanguage(lang)} style={{ flex: 1, padding: "7px 0", borderRadius: 9, border: `2px solid ${language === lang ? "#6366f1" : "#e2e8f0"}`, background: language === lang ? "#eef2ff" : "#fff", color: language === lang ? "#4338ca" : "#64748b", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s", textTransform: "uppercase" as const, letterSpacing: "0.3px" }}>
-                    {lang === "typescript" ? "TypeScript" : "JavaScript"}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                {LANG_OPTIONS.map(({ value, label, color }) => (
+                  <button key={value} onClick={() => setLanguage(value)} style={{ padding: "7px 0", borderRadius: 9, border: `2px solid ${language === value ? color : "#e2e8f0"}`, background: language === value ? `${color}18` : "#fff", color: language === value ? color : "#64748b", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                    {label}
                   </button>
                 ))}
               </div>
@@ -507,6 +638,27 @@ export default function LocatorsPage() {
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", margin: 0 }}>Include Dynamic Locators</p>
                   <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>getRowByText(text), getProductCard(index) etc.</p>
+                </div>
+              </label>
+
+              {/* Lazy Initialization */}
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: lazyInit ? "#fdf4ff" : "#f8fafc", borderRadius: 10, padding: "8px 10px", border: `1px solid ${lazyInit ? "#e9d5ff" : "#f1f5f9"}`, transition: "all 0.2s" }}>
+                <div onClick={() => setLazyInit(!lazyInit)} style={{ width: 36, height: 20, borderRadius: 10, background: lazyInit ? "#9333ea" : "#e2e8f0", position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
+                  <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: lazyInit ? 19 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: lazyInit ? "#7e22ce" : "#0f172a", margin: 0 }}>
+                    Lazy Initialization
+                    {lazyInit && <span style={{ fontSize: 10, fontWeight: 700, background: "#e9d5ff", color: "#7e22ce", borderRadius: 10, padding: "1px 6px", marginLeft: 6 }}>getter</span>}
+                  </p>
+                  <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>
+                    {lazyInit
+                      ? language === "python" ? "@property / def email_field(self) → Locator"
+                      : language === "java"   ? "public Locator emailField() { return page.getByLabel(...); }"
+                      : language === "javascript" ? "get emailField() { return this.page.getByLabel(...) }"
+                      : "get emailField(): Locator { return this.page.getByLabel(...) }"
+                      : "Locator created on each access — @property (Py), method (Java), getter (TS/JS)"}
+                  </p>
                 </div>
               </label>
             </div>
@@ -577,17 +729,25 @@ export default function LocatorsPage() {
                 )}
 
                 <span style={{ fontSize: 11, background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 20, padding: "2px 9px", fontWeight: 600, color: "#0d9488" }}>
-                  {framework} · {language === "typescript" ? "TS" : "JS"}
+                  {framework} · {language === "typescript" ? "TS" : language === "javascript" ? "JS" : language === "python" ? "PY" : "Java"}
                 </span>
 
-                {/* await toggle — SelectorsHub style */}
-                <button
-                  onClick={() => setAwaitMode(!awaitMode)}
-                  title="Copy locators with 'await' prefix (SelectorsHub style)"
-                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", border: `1px solid ${awaitMode ? "#6366f1" : "#e2e8f0"}`, borderRadius: 20, background: awaitMode ? "#eef2ff" : "#fff", fontSize: 11, fontWeight: 700, color: awaitMode ? "#4338ca" : "#64748b", cursor: "pointer", fontFamily: "'Fira Code',monospace", transition: "all 0.15s" }}
-                >
-                  ⚡ await
-                </button>
+                {/* await toggle — TS/JS only (SelectorsHub style) */}
+                {(language === "typescript" || language === "javascript") && (
+                  <button
+                    onClick={() => setAwaitMode(!awaitMode)}
+                    title="Copy locators with 'await' prefix (SelectorsHub style)"
+                    style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", border: `1px solid ${awaitMode ? "#6366f1" : "#e2e8f0"}`, borderRadius: 20, background: awaitMode ? "#eef2ff" : "#fff", fontSize: 11, fontWeight: 700, color: awaitMode ? "#4338ca" : "#64748b", cursor: "pointer", fontFamily: "'Fira Code',monospace", transition: "all 0.15s" }}
+                  >
+                    ⚡ await
+                  </button>
+                )}
+
+                {lazyInit && (
+                  <span title="Lazy initialization mode — getters were used in generated code" style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 10px", border: "1px solid #e9d5ff", borderRadius: 20, background: "#fdf4ff", fontSize: 11, fontWeight: 700, color: "#7e22ce" }}>
+                    🔮 lazy
+                  </span>
+                )}
 
                 <div style={{ marginLeft: "auto", display: "flex", gap: 7 }}>
                   <button onClick={copyCode} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 11px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 12, fontWeight: 600, color: "#475569", cursor: "pointer" }}>

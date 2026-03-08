@@ -10,10 +10,11 @@ export interface LocatorServiceOptions {
   preferredStrategy?: "role" | "text" | "label" | "placeholder" | "alt" | "title" | "testid" | "css";
   framework?: "playwright" | "cypress" | "selenium";
   groupIntoPOM?: boolean;
-  language?: "typescript" | "javascript";
+  language?: "typescript" | "javascript" | "python" | "java";
   includeActions?: boolean;
   includeDynamicLocators?: boolean;
   ignoreSections?: string;
+  lazyInit?: boolean;
 }
 
 export class LocatorService {
@@ -43,47 +44,168 @@ export class LocatorService {
     }
   }
 
-  private buildPrompt(input: string, options: LocatorServiceOptions): string {
-    const order = this.buildPriorityOrder(options.preferredStrategy);
-    const orderReadable = order
-      .map((s, i) => `${i + 1}) ${this.toPlaywrightName(s)}`)
-      .join("\n");
+  private toPythonName(strategy: string): string {
+    switch (strategy) {
+      case "role":        return "page.get_by_role()";
+      case "text":        return "page.get_by_text()";
+      case "label":       return "page.get_by_label()";
+      case "placeholder": return "page.get_by_placeholder()";
+      case "alt":         return "page.get_by_alt_text()";
+      case "title":       return "page.get_by_title()";
+      case "testid":      return "page.get_by_test_id()";
+      default:            return "page.locator()";
+    }
+  }
 
-    const lang = options.language === "javascript" ? "JavaScript" : "TypeScript";
-    const isTS = lang === "TypeScript";
-    const includeActions = options.includeActions !== false; // default true
+  private buildPrompt(input: string, options: LocatorServiceOptions): string {
+    const lang = options.language ?? "typescript";
+    const isTS  = lang === "typescript";
+    const isJS  = lang === "javascript";
+    const isPy  = lang === "python";
+    // Java = anything else
+    const isLazy         = options.lazyInit === true;
+    const includeActions = options.includeActions !== false;
     const includeDynamic = options.includeDynamicLocators === true;
 
-    const langOutputRules = isTS
-      ? `- Output syntactically correct TypeScript only; do not wrap in markdown fences.
-- Implement the class using private readonly Locator fields initialized in the constructor (not computed getters) for performance and clarity.
+    const langLabel = isTS ? "TypeScript" : isJS ? "JavaScript" : isPy ? "Python" : "Java";
+    const framework = options.framework ?? "Playwright";
+
+    const order = this.buildPriorityOrder(options.preferredStrategy);
+    const orderReadable = order
+      .map((s, i) => `${i + 1}) ${isPy ? this.toPythonName(s) : this.toPlaywrightName(s)}`)
+      .join("\n");
+
+    /* ── Language output rules ── */
+    let langOutputRules: string;
+    if (isPy) {
+      langOutputRules = isLazy
+        ? `- Output syntactically correct Python only; do not wrap in markdown fences.
+- Use snake_case for ALL field and method names.
+- Use @property decorator for EVERY locator (lazy initialization):
+  @property
+  def email_field(self) -> Locator:
+      return self.page.get_by_label("Email")
+- Constructor only stores page: def __init__(self, page: Page) -> None: / self.page = page
+- Import at the top: from playwright.sync_api import Page, Locator`
+        : `- Output syntactically correct Python only; do not wrap in markdown fences.
+- Use snake_case for ALL field and method names.
+- Playwright Python sync API: get_by_label(), get_by_role(), get_by_placeholder(), get_by_text(), get_by_test_id(), get_by_alt_text(), get_by_title(), locator()
+- Class pattern:
+  from playwright.sync_api import Page, Locator
+  class LoginPage:
+      def __init__(self, page: Page) -> None:
+          self.page = page
+          self.email_field: Locator = page.get_by_label("Email")
+- Action methods: def click_sign_in(self) -> None: / self.sign_in_button.click()`;
+    } else if (!isTS && !isJS) { // Java
+      langOutputRules = isLazy
+        ? `- Output syntactically correct Java only; do not wrap in markdown fences.
+- Use camelCase for field and method names.
+- Implement locators as public getter methods (lazy initialization pattern):
+  public Locator emailField() { return page.getByLabel("Email"); }
+- Class pattern:
+  import com.microsoft.playwright.*;
+  import com.microsoft.playwright.options.AriaRole;
+  public class LoginPage {
+      private final Page page;
+      public LoginPage(Page page) { this.page = page; }
+      public Locator emailField() { return page.getByLabel("Email"); }
+  }`
+        : `- Output syntactically correct Java only; do not wrap in markdown fences.
+- Use camelCase for field and method names.
+- Class pattern with private final Locator fields:
+  import com.microsoft.playwright.*;
+  import com.microsoft.playwright.options.AriaRole;
+  public class LoginPage {
+      private final Page page;
+      private final Locator emailField;
+      public LoginPage(Page page) {
+          this.page = page;
+          this.emailField = page.getByLabel("Email");
+      }
+  }
+- For getByRole with name: page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Submit"))
+- Action methods: public void clickSignIn() { signInButton.click(); } / public void setEmail(String v) { emailField.fill(v); }`;
+    } else if (isTS) {
+      langOutputRules = isLazy
+        ? `- Output syntactically correct TypeScript only; do not wrap in markdown fences.
+- Implement the class using TypeScript getter properties for EVERY locator (lazy initialization pattern). Each getter returns a fresh Locator on each access:
+  get emailField(): Locator { return this.page.getByLabel('Email'); }
+  Multi-line style is also fine:
+  get signInButton(): Locator {
+    return this.page.getByRole('button', { name: 'Sign In' });
+  }
+- Store page in constructor: constructor(private readonly page: Page) {}
 - Import at the top: import { Page, Locator } from '@playwright/test';`
-      : `- Output syntactically correct JavaScript only; do NOT include TypeScript types, generics, or annotations.
+        : `- Output syntactically correct TypeScript only; do not wrap in markdown fences.
+- Implement the class using private readonly Locator fields initialized in the constructor (not computed getters) for performance and clarity.
+- Import at the top: import { Page, Locator } from '@playwright/test';`;
+    } else { // JavaScript
+      langOutputRules = isLazy
+        ? `- Output syntactically correct JavaScript only; do NOT include TypeScript types, generics, or annotations.
+- Use getter properties for EVERY locator (lazy initialization):
+  get emailField() { return this.page.getByLabel('Email'); }
+- Store page in constructor: constructor(page) { this.page = page; }
+- No import statements needed.`
+        : `- Output syntactically correct JavaScript only; do NOT include TypeScript types, generics, or annotations.
 - Use plain ES2020 class syntax. All fields assigned in constructor as this.fieldName = page.getByXxx(...).
 - No import statements needed.`;
+    }
 
-    const actionRules = includeActions
-      ? `- Inputs/textareas/selects: create setters (fill/select) and getters when useful.
+    /* ── Action rules ── */
+    let actionRules: string;
+    if (!includeActions) {
+      actionRules = `- Do NOT generate any action methods (click, fill, navigate, etc.) — only locator fields/properties.`;
+    } else if (isPy) {
+      actionRules = `- Input fields: def set_xxx(self, value: str) -> None: / self.xxx_field.fill(value)
+- Buttons/links: def click_xxx(self) -> None: / self.xxx_button.click()
+- Static content: only @property locators (lazy) or plain fields.
+- If both username and password exist: def login(self, username: str, password: str) -> None:
+- Helpers when applicable: def is_forgot_password_visible(self) -> bool: / def is_logo_visible(self) -> bool:`;
+    } else if (!isTS && !isJS) { // Java
+      actionRules = `- Input fields: public void setXxx(String value) { xxxField.fill(value); }
+- Buttons/links: public void clickXxx() { xxxButton.click(); }
+- Static content: only locator fields/getters.
+- If both username and password exist: public void login(String username, String password)
+- Helpers when applicable: public boolean isForgotPasswordVisible() / public boolean isLogoVisible()`;
+    } else {
+      actionRules = `- Inputs/textareas/selects: create setters (fill/select) and getters when useful.
 - Buttons/links: create action methods like click/select.
 - Static content (headings/labels): only getters.
 - If both username and password fields exist, include a convenience method: async login(username${isTS ? ": string" : ""}, password${isTS ? ": string" : ""}).
-- Add two tiny helpers when applicable: async isForgotPasswordVisible(), async logoIsVisible().`
-      : `- Do NOT generate any action methods (click, fill, navigate, etc.) — only locator fields/properties.`;
+- Add two tiny helpers when applicable: async isForgotPasswordVisible(), async logoIsVisible().`;
+    }
 
-    const dynamicSection = includeDynamic
-      ? `\nDynamic/Parameterized Locators (REQUIRED — include in addition to regular fields):
+    /* ── Dynamic locators section ── */
+    let dynamicSection = "";
+    if (includeDynamic) {
+      if (isPy) {
+        dynamicSection = `\nDynamic/Parameterized Locators (REQUIRED — include in addition to regular fields):
+- def get_row_by_text(self, text: str) -> Locator: return self.page.get_by_role("row").filter(has_text=text)
+- def get_product_card(self, index: int) -> Locator: return self.page.locator("[data-card], .card, .product").nth(index)
+- def get_list_item(self, index: int) -> Locator: return self.page.locator("li").nth(index)
+- Apply wherever repeating/dynamic content exists on the page.`;
+      } else if (!isTS && !isJS) { // Java
+        dynamicSection = `\nDynamic/Parameterized Locators (REQUIRED — include in addition to regular fields):
+- public Locator getRowByText(String text) { return page.getByRole(AriaRole.ROW).filter(new Locator.FilterOptions().setHasText(text)); }
+- public Locator getProductCard(int index) { return page.locator("[data-card], .card, .product").nth(index); }
+- public Locator getListItem(int index) { return page.locator("li").nth(index); }
+- Apply wherever repeating/dynamic content exists on the page.`;
+      } else {
+        dynamicSection = `\nDynamic/Parameterized Locators (REQUIRED — include in addition to regular fields):
 - Generate parameterized methods for tables, lists, cards, and repeating element patterns found on the page.
 - Row pattern: async getRowByText(text${isTS ? ": string" : ""})${isTS ? ": Locator" : ""} { return this.page.getByRole('row').filter({ hasText: text }); }
 - Card pattern: async getProductCard(index${isTS ? ": number" : ""})${isTS ? ": Locator" : ""} { return this.page.locator('[data-card], .card, .product').nth(index); }
 - List item: async getListItem(index${isTS ? ": number" : ""})${isTS ? ": Locator" : ""} { return this.page.locator('li').nth(index); }
-- Apply wherever repeating/dynamic content exists on the page.`
-      : "";
+- Apply wherever repeating/dynamic content exists on the page.`;
+      }
+    }
 
     const ignoreRule = options.ignoreSections?.trim()
       ? `\n- IMPORTANT: Completely ignore and do NOT generate locators for these sections: ${options.ignoreSections.trim()}.`
       : "";
 
-    return `You are an expert ${lang} ${options.framework ?? "Playwright"} engineer. Generate production-ready ${lang} Page Object Model code.
+    return `You are an expert ${langLabel} ${framework} engineer. Generate production-ready ${langLabel} Page Object Model code.
 
 Goal:
 Given an HTML DOM source, component snippet, or page description, generate locators using the preferred built-in locator priority order. Generate corresponding getter/setter/action methods where applicable.
@@ -93,11 +215,11 @@ ${orderReadable}
 
 Rules:
 - Prefer semantic locators (role, text, label, placeholder, alt, title, testid) before CSS/XPath.
-- If an element has both visible text and role, prefer getByRole().
-- For input fields with a placeholder attribute, prefer getByPlaceholder() over getByLabel() regardless of the global priority order.
+- If an element has both visible text and role, prefer the role locator.
+- For input fields with a placeholder attribute, prefer the placeholder locator over label regardless of the global priority order.
 - Avoid dynamic ids, random classes, or auto-generated CSS; only use CSS/XPath if nothing semantic exists.
-- Use camelCase names and concise, production-ready POM style.
-- For social links, prefer getByRole('link', { name: /LinkedIn|Facebook|Twitter|YouTube/i }) if accessible names are present; otherwise fall back to a[href*="linkedin.com"] etc.${ignoreRule}
+- ${isPy ? "Use snake_case names and concise, production-ready POM style." : "Use camelCase names and concise, production-ready POM style."}
+- For social links, prefer role('link') with the link text if accessible names are present; otherwise fall back to href-based CSS selectors.${ignoreRule}
 
 Action methods:
 ${actionRules}
@@ -105,17 +227,17 @@ ${dynamicSection}
 
 Screenshot/image-specific rules:
 - Derive locator names ONLY from visible text in the image or explicit hints in the input. Do NOT invent placeholders or labels.
-- Prefer page.getByText('<exact visible text>') for static text, headings, and button/links; use { exact: true } when appropriate.
+- Prefer the text-based locator for static text, headings, and button/links; use exact match when appropriate.
 - Never output text values that are not present in the provided image/input.
 
-${lang} output rules:
+${langLabel} output rules:
 ${langOutputRules}
 
 Input:
 ${input}
 
 Output:
-- A single ${lang} class named based on the page context (fallback: GeneratedPage)
+- A single ${langLabel} class named based on the page context (fallback: GeneratedPage)
 - Include locator fields and methods as configured above
 `;
   }

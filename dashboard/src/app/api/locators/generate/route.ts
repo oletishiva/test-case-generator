@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
       includeActions = true,
       includeDynamicLocators = false,
       ignoreSections = "",
+      lazyInit = false,
     } = body as {
       inputType: "html" | "url" | "describe";
       content: string;
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest) {
       includeActions: boolean;
       includeDynamicLocators: boolean;
       ignoreSections: string;
+      lazyInit: boolean;
     };
 
     if (!content.trim()) {
@@ -149,6 +151,7 @@ export async function POST(req: NextRequest) {
           includeActions,
           includeDynamicLocators,
           ignoreSections,
+          lazyInit,
         });
         if (!code.trim()) throw new Error("Empty result");
         console.log(`✓ Locators generated with ${name}`);
