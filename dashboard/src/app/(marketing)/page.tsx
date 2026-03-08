@@ -2,227 +2,275 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, Shield, Code2, ArrowRight, TestTube, Sparkles,
-  ChevronDown, Play, CheckCircle2, Clock, GitBranch,
-  BarChart3, Bug, Users, Layers, Globe, Smartphone,
-  CloudLightning, Settings2, Search,
+  ArrowRight, TestTube, Sparkles, ChevronDown, Play,
+  CheckCircle2, GitBranch, BarChart3, Users, CloudLightning,
+  Settings2, Target, Database, FileText, RefreshCw, GraduationCap,
+  Building2, User, Menu, X, ChevronRight, Rocket, Star,
+  BookOpen, Lock, Code2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-/* ─── Nav links ─────────────────────────────────────────── */
-const navLinks = [
-  {
-    label: "Products",
-    items: ["Playwright Tests", "Cypress Tests", "Jest / Unit Tests", "API Tests", "Gherkin / BDD"],
-  },
-  {
-    label: "Solutions",
-    items: ["QA Engineers", "Dev Teams", "Agile / Scrum", "CI/CD Integration"],
-  },
-  { label: "Pricing", items: [] },
-  { label: "Blog", items: [] },
-  { label: "Docs", items: [] },
+/* ─── Nav tools list ──────────────────────────────────────── */
+const NAV_TOOLS = [
+  { label: "AI Test Generator", desc: "Generate tests from plain English", icon: Sparkles, href: "/dashboard" },
+  { label: "Locator Capture", desc: "Auto-generate robust selectors", icon: Target, href: "/dashboard" },
+  { label: "Test Data Generator", desc: "Create schema-aware test data", icon: Database, href: "/tools/test-data" },
+  { label: "Resume Builder", desc: "ATS-optimised QA resumes", icon: FileText, href: "/resume-builder" },
+  { label: "Code Converter", desc: "Translate across 50+ frameworks", icon: RefreshCw, href: "/dashboard" },
+  { label: "Interview Prep", desc: "500+ QA interview questions", icon: GraduationCap, href: "/blog" },
 ];
 
-/* ─── Social proof logos (text-only stand-ins) ─────────── */
-const socialLogos = ["Microsoft", "Atlassian", "Stripe", "Shopify", "Vercel", "GitHub", "Twilio"];
+/* ─── Hero content per audience ──────────────────────────── */
+const HERO = {
+  teams: {
+    badge: "For Engineering Teams",
+    line1: "AI-powered test automation",
+    line2: "at enterprise scale",
+    sub: "Generate production-ready Playwright, Cypress & Selenium suites in seconds. Integrate with CI/CD. Ship faster with confidence.",
+    cta: "Start free for teams",
+    ctaHref: "/sign-up",
+    secondary: "Book a demo",
+    pills: ["CI/CD Integration", "Team Workspaces", "Coverage Analytics", "SSO / SAML"],
+  },
+  candidates: {
+    badge: "For QA Candidates",
+    line1: "Land your dream",
+    line2: "QA engineering role",
+    sub: "Build an ATS-ready resume, practice 500+ interview questions, convert code across frameworks and generate test data — all free.",
+    cta: "Start for free",
+    ctaHref: "/sign-up",
+    secondary: "Explore tools",
+    pills: ["Resume Builder", "Interview Prep", "Code Converter", "Test Data Gen"],
+  },
+};
 
-/* ─── Core capability cards ──────────────────────────────── */
-const capabilities = [
+/* ─── Tool cards ─────────────────────────────────────────── */
+const TOOLS = [
   {
     icon: Sparkles,
-    title: "AI that writes tests for you",
-    body: "Describe a feature in plain English. AITestCraft generates complete, idiomatic test suites in seconds — no prompt-engineering needed.",
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-    border: "border-violet-100",
+    name: "AI Test Generator",
+    desc: "Describe a feature in plain English. Get Playwright, Cypress, Jest or BDD tests with edge cases in under 30 seconds.",
+    href: "/dashboard",
+    audience: "Everyone",
+    audienceCls: "bg-violet-100 text-violet-700",
+    color: "#7c3aed",
+    light: "#f5f3ff",
+    border: "#ede9fe",
+    tag: "Most Popular",
   },
   {
-    icon: Shield,
-    title: "Reduce test maintenance pain",
-    body: "Self-healing selectors and smart locator suggestions keep your suite green even as your UI evolves.",
-    color: "text-indigo-600",
-    bg: "bg-indigo-50",
-    border: "border-indigo-100",
+    icon: Target,
+    name: "Smart Locator Capture",
+    desc: "Auto-generate robust XPath, CSS and data-testid selectors powered by AI. Selectors that survive UI changes.",
+    href: "/dashboard",
+    audience: "Teams & Candidates",
+    audienceCls: "bg-blue-100 text-blue-700",
+    color: "#2563eb",
+    light: "#eff6ff",
+    border: "#dbeafe",
+    tag: null,
   },
   {
-    icon: Zap,
-    title: "Ship faster, with confidence",
-    body: "Integrate with your CI/CD pipeline. Get instant test coverage on every PR, with zero manual effort.",
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    border: "border-blue-100",
+    icon: Database,
+    name: "Test Data Generator",
+    desc: "Create realistic, schema-aware test data for any scenario. Export as CSV, JSON or SQL instantly.",
+    href: "/tools/test-data",
+    audience: "Everyone",
+    audienceCls: "bg-teal-100 text-teal-700",
+    color: "#0d9488",
+    light: "#f0fdfa",
+    border: "#ccfbf1",
+    tag: null,
+  },
+  {
+    icon: FileText,
+    name: "QA Resume Builder",
+    desc: "ATS-optimised resumes for QA engineers. AI-powered bullet points, 8 premium templates, instant PDF export.",
+    href: "/resume-builder",
+    audience: "Candidates",
+    audienceCls: "bg-rose-100 text-rose-700",
+    color: "#e11d48",
+    light: "#fff1f2",
+    border: "#fecdd3",
+    tag: "New",
+  },
+  {
+    icon: RefreshCw,
+    name: "Code Converter",
+    desc: "Translate test code across 50+ frameworks instantly. Selenium → Playwright. Java → Python. TestNG → Cypress.",
+    href: "/dashboard",
+    audience: "Candidates",
+    audienceCls: "bg-orange-100 text-orange-700",
+    color: "#ea580c",
+    light: "#fff7ed",
+    border: "#fed7aa",
+    tag: null,
+  },
+  {
+    icon: GraduationCap,
+    name: "Interview Prep",
+    desc: "500+ QA interview questions with model answers. Covers manual testing, automation, BDD, CI/CD and more.",
+    href: "/blog",
+    audience: "Candidates",
+    audienceCls: "bg-amber-100 text-amber-700",
+    color: "#d97706",
+    light: "#fffbeb",
+    border: "#fde68a",
+    tag: null,
   },
 ];
 
-/* ─── Product lines ──────────────────────────────────────── */
-const products = [
-  { icon: Code2, label: "AI", desc: "Autonomous test authoring, execution & management powered by Claude." },
-  { icon: Globe, label: "Web", desc: "Playwright & Cypress E2E tests for any web application." },
-  { icon: Smartphone, label: "Mobile", desc: "Cloud-based mobile testing for iOS and Android." },
-  { icon: CloudLightning, label: "API", desc: "Contract and integration tests for REST & GraphQL APIs." },
+/* ─── B2B features ───────────────────────────────────────── */
+const B2B_FEATURES = [
+  { icon: GitBranch, title: "CI/CD Integration", desc: "Connect to GitHub Actions, Jenkins, CircleCI. Trigger test generation on every PR automatically." },
+  { icon: Users, title: "Team Workspaces", desc: "Share test libraries, collaborate on suites and manage permissions across your QA team." },
+  { icon: BarChart3, title: "Coverage Analytics", desc: "Track test coverage per feature. Identify gaps before they reach production." },
+  { icon: Lock, title: "SSO / SAML", desc: "Enterprise-grade auth with Okta, Azure AD and Google Workspace integration." },
+  { icon: CloudLightning, title: "Bulk Generation", desc: "Generate 100+ test cases in one run. Perfect for large regression packs." },
+  { icon: Settings2, title: "Custom Frameworks", desc: "Support for proprietary frameworks and custom coding standards tailored to your stack." },
 ];
 
-/* ─── Feature tabs ────────────────────────────────────────── */
-const featureTabs = [
-  {
-    id: "create",
-    label: "Create",
-    icon: Sparkles,
-    heading: "Author tests faster than ever",
-    body: "Paste a user story, acceptance criteria, or free-form description. AITestCraft uses Claude to produce production-ready tests — with assertions, selectors, edge cases, and comments — in under 30 seconds.",
-    bullets: [
-      "Natural language → test code",
-      "Happy path + edge cases automatically",
-      "Playwright, Cypress, Jest, Selenium, Gherkin",
-    ],
-    code: `test('user can reset password', async ({ page }) => {
-  await page.goto('/forgot-password');
-  await page.fill('[data-testid="email"]', 'user@example.com');
-  await page.click('[data-testid="send-reset"]');
-
-  // Verify confirmation message
-  await expect(page.locator('[data-testid="confirm"]'))
-    .toContainText('Check your inbox');
-
-  // Edge: invalid email
-  await page.fill('[data-testid="email"]', 'notanemail');
-  await page.click('[data-testid="send-reset"]');
-  await expect(page.locator('[data-testid="error"]'))
-    .toContainText('valid email');
-});`,
-  },
-  {
-    id: "maintain",
-    label: "Maintain",
-    icon: Settings2,
-    heading: "Keep tests green as your UI evolves",
-    body: "AITestCraft generates resilient selectors using data-testid attributes and ARIA roles — so your tests survive UI redesigns. Get smart suggestions when tests break.",
-    bullets: [
-      "Resilient data-testid & ARIA selectors",
-      "Broken-test diagnosis suggestions",
-      "Diff-aware re-generation on UI change",
-    ],
-    code: `// AITestCraft-generated resilient selectors
-// Uses ARIA + data-testid over fragile CSS paths
-
-await page.getByRole('button', { name: 'Submit' }).click();
-await page.getByTestId('checkout-summary').toBeVisible();
-await page.getByLabel('Email address').fill('...');
-
-// Fallback chain if primary selector fails
-await page.locator('[data-testid="cta"], button[type=submit]')
-  .first().click();`,
-  },
-  {
-    id: "manage",
-    label: "Manage",
-    icon: BarChart3,
-    heading: "Full visibility across your test suite",
-    body: "Organise generated tests into collections. Track coverage per feature, export to your test management tool, and share with your team in one click.",
-    bullets: [
-      "Save & organise test libraries",
-      "Export to TestRail, Jira, Notion",
-      "Team workspaces (coming soon)",
-    ],
-    code: `// Saved test library structure
-{
-  "collection": "Checkout Flow",
-  "framework": "Playwright",
-  "tests": 12,
-  "coverage": {
-    "happy_path": true,
-    "edge_cases": true,
-    "error_states": true,
-    "security": true
-  },
-  "exportedTo": ["TestRail", "Jira"],
-  "lastGenerated": "2025-03-01"
-}`,
-  },
-  {
-    id: "debug",
-    label: "Debug",
-    icon: Bug,
-    heading: "Root-cause analysis at a glance",
-    body: "When a test fails, AITestCraft explains why in plain English — highlighting the exact assertion, the likely cause, and a suggested fix. No more staring at stack traces.",
-    bullets: [
-      "Human-readable failure explanations",
-      "Suggested fixes for broken assertions",
-      "Diff view of expected vs actual",
-    ],
-    code: `// AITestCraft failure analysis
-❌ Test: 'checkout completes with valid card'
-
-Assertion failed:
-  expect(page.locator('[data-testid="success"]'))
-    .toBeVisible()
-
-Likely cause:
-  The /api/payments endpoint returned 500.
-  The success screen is never rendered.
-
-Suggested fix:
-  Mock the payment API in your test setup,
-  or check the Stripe webhook configuration.`,
-  },
+/* ─── B2C features ───────────────────────────────────────── */
+const B2C_FEATURES = [
+  { icon: FileText, title: "ATS-Ready Resumes", desc: "8 premium templates designed to pass ATS screening and impress hiring managers." },
+  { icon: GraduationCap, title: "Interview Question Bank", desc: "500+ real interview questions from top companies with detailed model answers." },
+  { icon: RefreshCw, title: "50+ Framework Converter", desc: "Switch between any testing framework in seconds. Boost your market versatility." },
+  { icon: Sparkles, title: "AI Test Practice", desc: "Generate tests for practice scenarios to build your portfolio and sharpen skills." },
+  { icon: Database, title: "Test Data for Interviews", desc: "Generate realistic test data on the spot during live coding rounds." },
+  { icon: BookOpen, title: "QA Blog & Guides", desc: "In-depth guides on automation, BDD, API testing and career growth from QA experts." },
 ];
 
-/* ─── Case studies ───────────────────────────────────────── */
-const caseStudies = [
-  { company: "FinTech Co.", stat: "95%", label: "reduction in test-writing time", quote: "We went from 2-day test cycles to 20 minutes. The edge cases AI catches are invaluable.", author: "Sarah K., QA Lead" },
-  { company: "SaaS Startup", stat: "10×", label: "faster coverage on new features", quote: "One sprint went from zero E2E coverage to 80%. Nothing else comes close.", author: "Marcus T., CTO" },
-  { company: "E-commerce", stat: "30%", label: "fewer production bugs", quote: "AITestCraft catches regressions we'd never have caught manually.", author: "Priya R., Automation Lead" },
-  { company: "Agency", stat: "3×", label: "faster test creation vs manual", quote: "Our devs now own their own test suites. No dedicated QA needed for greenfield features.", author: "James L., Engineering Manager" },
-  { company: "Enterprise", stat: "50%", label: "less time spent on test maintenance", quote: "The resilient selectors mean we stopped chasing flaky tests every sprint.", author: "Aiko M., SDET" },
+/* ─── Stats ──────────────────────────────────────────────── */
+const STATS = [
+  { n: "50k+", l: "Test cases generated" },
+  { n: "8", l: "Resume templates" },
+  { n: "50+", l: "Frameworks supported" },
+  { n: "< 30s", l: "Average generation time" },
 ];
 
-/* ─── Integrations ───────────────────────────────────────── */
-const integrations = [
-  "GitHub", "GitLab", "Jenkins", "CircleCI", "Jira", "Slack",
-  "TestRail", "Browserstack", "Playwright", "Cypress", "Notion", "Linear",
+/* ─── Testimonials ───────────────────────────────────────── */
+const TESTIMONIALS = [
+  {
+    quote: "We went from writing tests manually over 2 days to generating a full regression suite in under an hour. Game-changer for our CI pipeline.",
+    author: "Senior QA Engineer",
+    company: "SaaS startup, Series B",
+    avatar: "S",
+  },
+  {
+    quote: "I landed my SDET role within 3 weeks. The resume builder and interview prep were exactly what I needed. Questions were spot-on for what I was asked.",
+    author: "SDET",
+    company: "Joined a FinTech company",
+    avatar: "A",
+  },
+  {
+    quote: "The locator generator alone saved us hours every sprint. No more fragile selectors breaking after a UI update.",
+    author: "Automation Lead",
+    company: "E-commerce platform",
+    avatar: "R",
+  },
 ];
 
 /* ─── Footer columns ─────────────────────────────────────── */
-const footerCols = [
-  { heading: "Product", links: ["Playwright Generator", "Cypress Generator", "Jest Generator", "API Tests", "Pricing"] },
-  { heading: "Developers", links: ["Documentation", "Changelog", "GitHub", "API Reference"] },
-  { heading: "Company", links: ["About", "Careers", "Blog", "Contact"] },
-  { heading: "Resources", links: ["Success Stories", "Webinars", "Community", "Status"] },
+const FOOTER_COLS = [
+  {
+    heading: "Tools",
+    links: [
+      { label: "AI Test Generator", href: "/dashboard" },
+      { label: "Locator Capture", href: "/dashboard" },
+      { label: "Test Data Generator", href: "/tools/test-data" },
+      { label: "Resume Builder", href: "/resume-builder" },
+      { label: "Code Converter", href: "/dashboard" },
+    ],
+  },
+  {
+    heading: "For Teams",
+    links: [
+      { label: "CI/CD Integration", href: "#" },
+      { label: "Team Workspaces", href: "#" },
+      { label: "Coverage Analytics", href: "#" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
+  {
+    heading: "For Candidates",
+    links: [
+      { label: "Resume Builder", href: "/resume-builder" },
+      { label: "Interview Prep", href: "/blog" },
+      { label: "Code Converter", href: "/dashboard" },
+      { label: "Blog & Guides", href: "/blog" },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
+      { label: "Blog", href: "/blog" },
+      { label: "Docs", href: "#" },
+      { label: "Contact", href: "#" },
+    ],
+  },
 ];
 
-/* ─── Nav dropdown ────────────────────────────────────────── */
-const NAV_ROUTES: Record<string, string> = {
-  Pricing: "/pricing",
-  Blog: "/blog",
-  Docs: "/docs",
-};
-
-function NavDropdown({ label, items }: { label: string; items: string[] }) {
+/* ─── Dropdown: Tools ────────────────────────────────────── */
+function ToolsDropdown() {
   const [open, setOpen] = useState(false);
-  if (!items.length) {
-    const href = NAV_ROUTES[label] ?? "#";
-    return (
-      <Link href={href} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-        {label}
-      </Link>
-    );
-  }
   return (
     <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-        {label} <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+      <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors py-1">
+        Tools <ChevronDown className="h-3.5 w-3.5 opacity-60" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-xl border bg-white p-2 shadow-xl">
-          {items.map((item) => (
-            <a key={item} href="#" className="block rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-              {item}
-            </a>
+        <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
+          {NAV_TOOLS.map((t) => (
+            <Link
+              key={t.label}
+              href={t.href}
+              className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors"
+            >
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50">
+                <t.icon className="h-3.5 w-3.5 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{t.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Dropdown: Solutions ────────────────────────────────── */
+function SolutionsDropdown() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors py-1">
+        Solutions <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-60 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
+          {[
+            { label: "For Engineering Teams", desc: "CI/CD, team workspaces, analytics", icon: Building2, href: "/sign-up" },
+            { label: "For QA Candidates", desc: "Resume, interview prep, career tools", icon: User, href: "/sign-up" },
+          ].map(({ label, desc, icon: Icon, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors"
+            >
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                <Icon className="h-3.5 w-3.5 text-gray-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+              </div>
+            </Link>
           ))}
         </div>
       )}
@@ -232,452 +280,556 @@ function NavDropdown({ label, items }: { label: string; items: string[] }) {
 
 /* ─── Page ───────────────────────────────────────────────── */
 export default function MarketingPage() {
-  const [activeTab, setActiveTab] = useState("create");
-  const tab = featureTabs.find((t) => t.id === activeTab)!;
+  const [audience, setAudience] = useState<"teams" | "candidates">("teams");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const hero = HERO[audience];
 
   return (
     <div className="min-h-screen bg-white text-gray-900 antialiased">
 
       {/* ── Top banner ── */}
       <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-center text-xs font-medium text-white">
-        🎉 New: Gherkin / BDD output now available —{" "}
-        <Link href="/sign-up" className="underline underline-offset-2 hover:opacity-80">Try it free →</Link>
+        🚀 New: Resume Builder + Smart Locator Capture now live —{" "}
+        <Link href="/sign-up" className="underline underline-offset-2 hover:opacity-80">Try free →</Link>
       </div>
 
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
-              <TestTube className="h-4.5 w-4.5 text-white" />
+              <TestTube className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900">AITestCraft</span>
-          </div>
+            <span className="text-lg font-bold tracking-tight text-gray-900">AITestCraft</span>
+          </Link>
 
-          {/* Links */}
-          <div className="hidden items-center gap-8 lg:flex">
-            {navLinks.map((l) => (
-              <NavDropdown key={l.label} label={l.label} items={l.items} />
-            ))}
+          {/* Desktop links */}
+          <div className="hidden items-center gap-7 lg:flex">
+            <ToolsDropdown />
+            <SolutionsDropdown />
+            <Link href="/blog" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Blog</Link>
+            <Link href="#pricing" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link>
           </div>
 
           {/* CTAs */}
-          <div className="flex items-center gap-3">
-            <Link href="/sign-in">
-              <Button variant="ghost" size="sm" className="text-sm text-gray-600">Login</Button>
+          <div className="flex items-center gap-2">
+            <Link href="/sign-in" className="hidden text-sm text-gray-500 hover:text-gray-900 transition-colors sm:block">
+              Login
             </Link>
             <Link href="/sign-up">
-              <Button size="sm" className="bg-violet-600 hover:bg-violet-700 px-5 text-sm">
-                Get AITestCraft Free
+              <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-sm px-4">
+                Get Started Free
               </Button>
             </Link>
+            <button
+              className="ml-1 flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 lg:hidden"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden border-t bg-white lg:hidden"
+            >
+              <div className="px-4 py-3 space-y-0.5">
+                <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Tools</p>
+                {NAV_TOOLS.map((t) => (
+                  <Link
+                    key={t.label}
+                    href={t.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <t.icon className="h-4 w-4 text-gray-400 shrink-0" />
+                    {t.label}
+                  </Link>
+                ))}
+                <div className="border-t pt-2 mt-2 space-y-0.5">
+                  <Link href="/blog" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Blog</Link>
+                  <Link href="#pricing" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Pricing</Link>
+                  <Link href="/sign-in" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Login</Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white px-6 pb-16 pt-20">
-        {/* Background grid */}
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] bg-[size:64px_64px] opacity-40" />
+      <section className="relative overflow-hidden bg-[#0a0f1e] px-4 pt-16 pb-24 sm:px-6 sm:pt-20 sm:pb-32">
+        {/* Grid pattern */}
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        {/* Glow */}
+        <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-[500px] w-[900px] rounded-full bg-violet-600/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-6xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <Badge className="mb-5 border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50">
-                AI-driven testing · Powered by Claude
-              </Badge>
-              <h1 className="mb-5 text-5xl font-extrabold leading-[1.1] tracking-tight text-gray-900 sm:text-6xl">
-                AI-driven test generation<br />
-                <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  for every framework
+        <div className="relative mx-auto max-w-4xl text-center">
+
+          {/* Audience toggle */}
+          <div className="mb-8 inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-sm">
+            {(["teams", "candidates"] as const).map((a) => (
+              <button
+                key={a}
+                onClick={() => setAudience(a)}
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 ${
+                  audience === a
+                    ? "bg-violet-600 text-white shadow-lg"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {a === "teams"
+                  ? <Building2 className="h-3.5 w-3.5" />
+                  : <User className="h-3.5 w-3.5" />}
+                {a === "teams" ? "For Teams" : "For Candidates"}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={audience}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.28 }}
+            >
+              {/* Badge */}
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                <span className="text-xs font-medium text-violet-300">{hero.badge}</span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[60px]">
+                {hero.line1}<br />
+                <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+                  {hero.line2}
                 </span>
               </h1>
-              <p className="mb-8 text-lg text-gray-500 sm:text-xl">
-                Describe your feature. AITestCraft generates production-ready Playwright, Cypress,
-                Jest and Selenium tests in seconds — including edge cases you'd never think of.
+
+              {/* Sub */}
+              <p className="mx-auto mb-8 max-w-2xl text-base text-gray-400 sm:text-lg leading-relaxed">
+                {hero.sub}
               </p>
+
+              {/* CTAs */}
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link href="/sign-up">
-                  <Button size="lg" className="gap-2 bg-violet-600 px-8 text-base hover:bg-violet-700 shadow-lg shadow-violet-200">
-                    Try AITestCraft for free <ArrowRight className="h-4 w-4" />
+                <Link href={hero.ctaHref}>
+                  <Button size="lg" className="w-full gap-2 bg-violet-600 px-8 text-sm font-semibold hover:bg-violet-700 shadow-lg shadow-violet-900/50 sm:w-auto">
+                    {hero.cta} <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="gap-2 border-gray-200 px-8 text-base text-gray-700 hover:bg-gray-50">
-                  <Play className="h-4 w-4 text-violet-600" /> Watch the demo
-                </Button>
-              </div>
-              <p className="mt-4 text-xs text-gray-400">No credit card required · Free to start · Works in 30 seconds</p>
-            </motion.div>
-          </div>
-
-          {/* Product screenshot mockup */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-14 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-200"
-          >
-            {/* Browser chrome */}
-            <div className="flex items-center gap-2 border-b bg-gray-50 px-4 py-3">
-              <span className="h-3 w-3 rounded-full bg-red-400" />
-              <span className="h-3 w-3 rounded-full bg-yellow-400" />
-              <span className="h-3 w-3 rounded-full bg-green-400" />
-              <div className="mx-4 flex-1 rounded-md bg-white border border-gray-200 px-3 py-1 text-xs text-gray-400">
-                app.aitestcraft.com/test-cases
-              </div>
-            </div>
-            {/* App UI mockup */}
-            <div className="grid grid-cols-2 divide-x divide-gray-100">
-              {/* Left – input */}
-              <div className="p-6">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Feature description</p>
-                <div className="mb-4 flex gap-2">
-                  {["Playwright", "Cypress", "Jest"].map((f, i) => (
-                    <span key={f} className={`rounded-full px-3 py-1 text-xs font-medium ${i === 0 ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-600"}`}>{f}</span>
-                  ))}
-                </div>
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 font-mono text-xs text-gray-600 leading-relaxed">
-                  As a user, I want to reset my password via email so that I can regain access to my account.<br /><br />
-                  Acceptance criteria:<br />
-                  - Show error for invalid email<br />
-                  - Send reset link within 30s<br />
-                  - Link expires after 1 hour<br />
-                  - Show success confirmation
-                </div>
-                <Button className="mt-4 w-full gap-2 bg-violet-600 hover:bg-violet-700 text-sm">
-                  <Zap className="h-3.5 w-3.5" /> Generate Test Cases
-                </Button>
-              </div>
-              {/* Right – output */}
-              <div className="bg-gray-950 p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Generated output</p>
-                  <Badge className="border-green-500/30 bg-green-500/10 text-[10px] text-green-400 hover:bg-green-500/10">✓ 7 tests</Badge>
-                </div>
-                <pre className="text-xs leading-relaxed text-green-400 font-mono overflow-hidden whitespace-pre">{`test('reset password – valid email', async ({ page }) => {
-  await page.goto('/forgot-password');
-  await page.fill('[data-testid="email"]',
-    'user@test.com');
-  await page.click('[data-testid="submit"]');
-  await expect(
-    page.locator('[data-testid="success"]')
-  ).toBeVisible();
-});
-
-// + 6 more: invalid email, expired link,
-// rate limit, network error...`}</pre>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Social proof logos ── */}
-      <section className="border-y bg-gray-50 px-6 py-8">
-        <div className="mx-auto max-w-6xl">
-          <p className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Trusted by engineering teams at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-            {socialLogos.map((name) => (
-              <span key={name} className="text-lg font-bold text-gray-300 hover:text-gray-400 transition-colors cursor-default">
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 3 Core capabilities ── */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-              Quality software, shipped faster
-            </h2>
-            <p className="mt-3 text-gray-500">Three things AITestCraft does better than manual testing.</p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {capabilities.map(({ icon: Icon, title, body, color, bg, border }) => (
-              <motion.div
-                key={title}
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.2 }}
-                className={`rounded-2xl border ${border} ${bg} p-7`}
-              >
-                <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-                <h3 className="mb-2 text-lg font-semibold text-gray-900">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{body}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Product lines ── */}
-      <section className="border-y bg-slate-50 px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <Badge className="mb-4 border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-50">Platform</Badge>
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">One platform, every test type</h2>
-            <p className="mt-3 text-gray-500">From E2E to API to mobile — AITestCraft covers your full stack.</p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {products.map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="group cursor-pointer rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-violet-200 hover:shadow-md">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-sm">
-                  <Icon className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="mb-1.5 font-semibold text-gray-900">{label}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-medium text-violet-600 opacity-0 transition-opacity group-hover:opacity-100">
-                  Learn more <ArrowRight className="h-3.5 w-3.5" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Feature tabs ── */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-              From idea to test suite in one workflow
-            </h2>
-            <p className="mt-3 text-gray-500">Every stage of the test lifecycle, powered by AI.</p>
-          </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-10 flex h-auto flex-wrap justify-center gap-2 bg-transparent p-0">
-              {featureTabs.map(({ id, label, icon: Icon }) => (
-                <TabsTrigger
-                  key={id}
-                  value={id}
-                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 data-[state=active]:border-violet-600 data-[state=active]:bg-violet-600 data-[state=active]:text-white shadow-sm"
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full gap-2 border-white/10 bg-white/5 px-8 text-sm text-white hover:bg-white/10 sm:w-auto"
                 >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid gap-8 lg:grid-cols-2 lg:items-center"
-          >
-            {/* Text */}
-            <div>
-              <h3 className="mb-4 text-2xl font-bold text-gray-900">{tab.heading}</h3>
-              <p className="mb-6 text-gray-500 leading-relaxed">{tab.body}</p>
-              <ul className="space-y-3">
-                {tab.bullets.map((b) => (
-                  <li key={b} className="flex items-center gap-3 text-sm text-gray-700">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-violet-600" />
-                    {b}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/sign-up" className="mt-8 inline-flex">
-                <Button className="gap-2 bg-violet-600 hover:bg-violet-700">
-                  Try it free <ArrowRight className="h-4 w-4" />
+                  <Play className="h-4 w-4" /> {hero.secondary}
                 </Button>
-              </Link>
-            </div>
-            {/* Code */}
-            <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-950 shadow-xl">
-              <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.03] px-5 py-3">
-                <span className="h-3 w-3 rounded-full bg-red-500/60" />
-                <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-                <span className="h-3 w-3 rounded-full bg-green-500/60" />
-                <span className="ml-2 text-xs text-gray-500">generated.spec.ts</span>
               </div>
-              <pre className="overflow-x-auto p-5 text-xs leading-relaxed text-gray-300 font-mono whitespace-pre">
-                {tab.code}
-              </pre>
-            </div>
-          </motion.div>
+
+              {/* Feature pills */}
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                {hero.pills.map((p) => (
+                  <span
+                    key={p}
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-400"
+                  >
+                    <CheckCircle2 className="h-3 w-3 text-violet-400 shrink-0" /> {p}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </section>
 
-      {/* ── Case studies ── */}
-      <section className="border-y bg-slate-50 px-6 py-20">
+      {/* ── Stats bar ── */}
+      <div className="border-b bg-slate-50 px-4 py-7 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+            {STATS.map(({ n, l }) => (
+              <div key={l} className="text-center">
+                <p className="text-2xl font-extrabold text-gray-900 sm:text-3xl">{n}</p>
+                <p className="mt-1 text-xs text-gray-500">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tools grid ── */}
+      <section className="px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 text-center">
-            <Badge className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">Results</Badge>
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">Real teams, real results</h2>
-            <p className="mt-3 text-gray-500">What engineering teams achieve with AITestCraft.</p>
+            <Badge className="mb-4 border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-50">
+              Platform
+            </Badge>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Everything for QA excellence
+            </h2>
+            <p className="mt-3 text-gray-500 max-w-xl mx-auto text-sm sm:text-base">
+              Six AI-powered tools covering the full spectrum — from test generation to career advancement.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {TOOLS.map((tool) => (
+              <Link key={tool.name} href={tool.href} className="group block">
+                <div className="relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md hover:-translate-y-1">
+                  {tool.tag && (
+                    <span className="absolute right-4 top-4 rounded-full bg-violet-600 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                      {tool.tag}
+                    </span>
+                  )}
+                  <div
+                    className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl"
+                    style={{ background: tool.light, border: `1px solid ${tool.border}` }}
+                  >
+                    <tool.icon className="h-5 w-5" style={{ color: tool.color }} />
+                  </div>
+                  <h3 className="mb-2 text-base font-semibold text-gray-900">{tool.name}</h3>
+                  <p className="mb-4 flex-1 text-sm text-gray-500 leading-relaxed">{tool.desc}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${tool.audienceCls}`}>
+                      {tool.audience}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs font-medium text-violet-600 opacity-0 transition-opacity group-hover:opacity-100">
+                      Launch <ChevronRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── B2B section ── */}
+      <section className="border-y bg-[#0a0f1e] px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5">
+                <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                <span className="text-xs font-medium text-blue-300">For Engineering Teams</span>
+              </div>
+              <h2 className="text-3xl font-bold text-white sm:text-4xl">
+                Built for teams that ship at scale
+              </h2>
+              <p className="mt-3 max-w-xl text-gray-400 text-sm sm:text-base">
+                Everything your QA team needs — from automated test generation to coverage analytics and CI/CD integration.
+              </p>
+            </div>
+            <Link href="/sign-up" className="shrink-0">
+              <Button className="gap-2 border-white/10 bg-white/10 text-white hover:bg-white/20">
+                Get team access <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {B2B_FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-white/5 bg-white/[0.03] p-5 transition-colors hover:bg-white/[0.06]"
+              >
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600/20">
+                  <Icon className="h-4 w-4 text-blue-400" />
+                </div>
+                <h3 className="mb-1.5 text-sm font-semibold text-white">{title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── B2C section ── */}
+      <section className="px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5">
+                <User className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-xs font-medium text-emerald-700">For QA Candidates</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+                Accelerate your QA career
+              </h2>
+              <p className="mt-3 max-w-xl text-gray-500 text-sm sm:text-base">
+                From your first resume to your dream SDET role — AITestCraft gives you the tools to stand out.
+              </p>
+            </div>
+            <Link href="/sign-up" className="shrink-0">
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                Start for free <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {B2C_FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-gray-200 bg-gray-50 p-5 transition-all hover:border-emerald-200 hover:bg-emerald-50/50"
+              >
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
+                  <Icon className="h-4 w-4 text-emerald-600" />
+                </div>
+                <h3 className="mb-1.5 text-sm font-semibold text-gray-900">{title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="border-y bg-slate-50 px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-12 text-center">
+            <Badge className="mb-4 border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-50">
+              Simple workflow
+            </Badge>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Up and running in minutes
+            </h2>
+          </div>
+
+          <div className="grid gap-10 sm:grid-cols-3">
+            {[
+              { n: "01", icon: Code2, title: "Describe", desc: "Paste your user story, acceptance criteria, or feature description in plain English." },
+              { n: "02", icon: Sparkles, title: "Generate", desc: "AI generates production-ready tests with edge cases, assertions and smart selectors." },
+              { n: "03", icon: Rocket, title: "Deploy", desc: "Copy, download or push directly to your repo. Integrate with your CI/CD pipeline." },
+            ].map(({ n, icon: Icon, title, desc }, i) => (
+              <div key={n} className="relative text-center">
+                {/* Connector line — desktop only */}
+                {i < 2 && (
+                  <div className="absolute top-7 left-[calc(50%+36px)] hidden h-px w-[calc(100%-72px)] bg-violet-200 sm:block" />
+                )}
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-600 shadow-lg shadow-violet-200">
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+                <p className="mb-1 text-xs font-bold text-violet-400 tracking-widest">{n}</p>
+                <h3 className="mb-2 text-base font-semibold text-gray-900">{title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <div className="mb-4 flex items-center justify-center gap-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Loved by QA engineers
+            </h2>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {caseStudies.slice(0, 3).map(({ company, stat, label, quote, author }) => (
-              <motion.div
-                key={company}
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-col rounded-2xl border border-gray-200 bg-white p-7 shadow-sm"
-              >
-                <div className="mb-1 text-4xl font-extrabold text-violet-600">{stat}</div>
-                <p className="mb-4 text-sm font-medium text-gray-700">{label}</p>
-                <p className="flex-1 text-sm text-gray-500 italic leading-relaxed">&ldquo;{quote}&rdquo;</p>
-                <div className="mt-5 flex items-center gap-3 border-t pt-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-bold text-white">
-                    {author[0]}
+            {TESTIMONIALS.map(({ quote, author, company, avatar }) => (
+              <div key={author} className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="mb-4 flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="mb-5 flex-1 text-sm text-gray-600 leading-relaxed italic">
+                  &ldquo;{quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-3 border-t pt-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
+                    {avatar}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-900">{author}</p>
+                    <p className="text-sm font-medium text-gray-900">{author}</p>
                     <p className="text-xs text-gray-400">{company}</p>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-          {/* Two more wider cards */}
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            {caseStudies.slice(3).map(({ company, stat, label, quote, author }) => (
-              <div key={company} className="flex items-center gap-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="shrink-0 text-center">
-                  <div className="text-3xl font-extrabold text-violet-600">{stat}</div>
-                  <p className="mt-0.5 text-xs text-gray-500 max-w-[80px] leading-tight">{label}</p>
-                </div>
-                <div className="border-l pl-6">
-                  <p className="text-sm text-gray-500 italic">&ldquo;{quote}&rdquo;</p>
-                  <p className="mt-2 text-xs font-medium text-gray-700">{author} · {company}</p>
-                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Integrations ── */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-12 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">Works with your stack</h2>
-            <p className="mt-3 text-gray-500">Drop AITestCraft into the tools you already use.</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {integrations.map((name) => (
-              <div key={name} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 transition-all cursor-default">
-                <Layers className="h-3.5 w-3.5 opacity-60" />
-                {name}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Quality intelligence banner ── */}
-      <section className="border-y bg-gradient-to-br from-violet-600 to-indigo-700 px-6 py-16">
+      {/* ── Pricing ── */}
+      <section id="pricing" className="border-y bg-slate-50 px-4 py-16 sm:px-6 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <Badge className="mb-4 border-white/20 bg-white/10 text-white hover:bg-white/10">Intelligence</Badge>
-              <h2 className="mb-4 text-3xl font-bold text-white">
-                Make every test count with quality intelligence
-              </h2>
-              <p className="mb-6 text-violet-100">
-                AITestCraft doesn't just generate tests — it tracks coverage, identifies gaps,
-                and tells you exactly which features need more attention.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                {["Optimise coverage", "Manage test impact", "Close coverage gaps", "Minimise release risk"].map((item) => (
-                  <div key={item} className="flex items-center gap-2 text-sm text-violet-100">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-white/70" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <Link href="/sign-up" className="mt-8 inline-flex">
-                <Button size="lg" className="bg-white text-violet-700 hover:bg-violet-50 gap-2">
-                  Start for free <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { n: "< 30s", l: "Average generation time" },
-                { n: "5", l: "Frameworks supported" },
-                { n: "95%", l: "Edge-case coverage rate" },
-                { n: "10×", l: "Faster than manual writing" },
-              ].map(({ n, l }) => (
-                <div key={l} className="rounded-2xl border border-white/15 bg-white/10 p-5 text-center">
-                  <p className="text-3xl font-extrabold text-white">{n}</p>
-                  <p className="mt-1 text-xs text-violet-200">{l}</p>
+          <div className="mb-12 text-center">
+            <Badge className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
+              Pricing
+            </Badge>
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Start free, scale when ready
+            </h2>
+            <p className="mt-3 text-gray-500 text-sm">No credit card required.</p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                period: "forever",
+                desc: "Perfect for individual candidates and exploration.",
+                features: ["50 test cases / month", "AI Test Generator", "Resume Builder (1 export)", "Code Converter", "Interview Prep access"],
+                cta: "Get started",
+                href: "/sign-up",
+                highlight: false,
+              },
+              {
+                name: "Pro",
+                price: "$19",
+                period: "/ month",
+                desc: "For serious QA engineers and active job seekers.",
+                features: ["Unlimited test cases", "All 6 tools, full access", "Unlimited resume exports", "Priority AI generation", "Email support"],
+                cta: "Start Pro trial",
+                href: "/sign-up",
+                highlight: true,
+              },
+              {
+                name: "Teams",
+                price: "$49",
+                period: "/ month",
+                desc: "For QA teams and engineering organisations.",
+                features: ["Everything in Pro", "Up to 10 members", "CI/CD integration", "Coverage analytics", "SSO / SAML", "Priority support"],
+                cta: "Contact sales",
+                href: "#",
+                highlight: false,
+              },
+            ].map(({ name, price, period, desc, features, cta, href, highlight }) => (
+              <div
+                key={name}
+                className={`relative rounded-2xl border p-7 ${
+                  highlight
+                    ? "border-violet-600 bg-violet-600 text-white shadow-xl shadow-violet-200"
+                    : "border-gray-200 bg-white shadow-sm"
+                }`}
+              >
+                {highlight && (
+                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-3 py-0.5 text-[11px] font-bold text-gray-900 whitespace-nowrap">
+                    Most Popular
+                  </span>
+                )}
+                <p className={`mb-1 text-sm font-semibold ${highlight ? "text-violet-200" : "text-gray-500"}`}>{name}</p>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className={`text-4xl font-extrabold ${highlight ? "text-white" : "text-gray-900"}`}>{price}</span>
+                  <span className={`text-sm ${highlight ? "text-violet-200" : "text-gray-400"}`}>{period}</span>
                 </div>
-              ))}
-            </div>
+                <p className={`mb-5 text-sm ${highlight ? "text-violet-100" : "text-gray-500"}`}>{desc}</p>
+                <ul className="mb-6 space-y-2.5">
+                  {features.map((f) => (
+                    <li key={f} className={`flex items-start gap-2 text-sm ${highlight ? "text-violet-100" : "text-gray-600"}`}>
+                      <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${highlight ? "text-violet-200" : "text-violet-600"}`} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={href}>
+                  <Button
+                    className={`w-full ${
+                      highlight
+                        ? "bg-white text-violet-700 hover:bg-violet-50"
+                        : "bg-violet-600 text-white hover:bg-violet-700"
+                    }`}
+                  >
+                    {cta}
+                  </Button>
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-2xl text-center">
-          <Search className="mx-auto mb-4 h-10 w-10 text-violet-400" />
-          <h2 className="mb-4 text-4xl font-extrabold text-gray-900">
-            Stop writing tests manually
+      <section className="bg-[#0a0f1e] px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="mb-4 text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl">
+            Ready to transform your<br />
+            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+              QA workflow?
+            </span>
           </h2>
-          <p className="mb-8 text-lg text-gray-500">
-            Join QA engineers and developers who ship faster with AITestCraft.
+          <p className="mb-8 text-gray-400 text-base sm:text-lg">
+            Join thousands of QA engineers generating better tests in less time.
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/sign-up">
-              <Button size="lg" className="gap-2 bg-violet-600 px-10 text-base hover:bg-violet-700 shadow-lg shadow-violet-200">
+              <Button size="lg" className="w-full gap-2 bg-violet-600 px-10 text-base hover:bg-violet-700 shadow-lg shadow-violet-900/50 sm:w-auto">
                 Get AITestCraft Free <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="gap-2 px-8 text-base border-gray-200 text-gray-700">
-              <Users className="h-4 w-4" /> Schedule a demo
-            </Button>
+            <Link href="/resume-builder">
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full gap-2 border-white/10 bg-white/5 px-8 text-base text-white hover:bg-white/10 sm:w-auto"
+              >
+                <FileText className="h-4 w-4" /> Try Resume Builder
+              </Button>
+            </Link>
           </div>
+          <p className="mt-5 text-xs text-gray-500">No credit card required · Free to start · Cancel anytime</p>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t bg-gray-50">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+      <footer className="border-t bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
             {/* Brand */}
-            <div className="lg:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
                   <TestTube className="h-4 w-4 text-white" />
                 </div>
                 <span className="font-bold text-gray-900">AITestCraft</span>
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                AI-powered test case generation for modern engineering teams.
+              <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                AI-powered QA tools for teams and candidates.
               </p>
-              <div className="mt-4 flex gap-3">
+              <div className="flex gap-4">
                 {["GitHub", "X", "LinkedIn"].map((s) => (
                   <a key={s} href="#" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">{s}</a>
                 ))}
               </div>
             </div>
+
             {/* Columns */}
-            {footerCols.map(({ heading, links }) => (
+            {FOOTER_COLS.map(({ heading, links }) => (
               <div key={heading}>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">{heading}</p>
                 <ul className="space-y-2">
-                  {links.map((l) => (
-                    <li key={l}>
-                      <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">{l}</a>
+                  {links.map(({ label, href }) => (
+                    <li key={label}>
+                      <Link href={href} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                        {label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
+
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t pt-8 sm:flex-row">
             <p className="text-xs text-gray-400">© {new Date().getFullYear()} AITestCraft. All rights reserved.</p>
             <div className="flex gap-5">
