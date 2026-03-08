@@ -10,6 +10,10 @@ export interface LocatorServiceOptions {
   preferredStrategy?: "role" | "text" | "label" | "placeholder" | "alt" | "title" | "testid" | "css";
   framework?: "playwright" | "cypress" | "selenium";
   groupIntoPOM?: boolean;
+  language?: "typescript" | "javascript";
+  includeActions?: boolean;
+  includeDynamicLocators?: boolean;
+  ignoreSections?: string;
 }
 
 export class LocatorService {
@@ -45,10 +49,44 @@ export class LocatorService {
       .map((s, i) => `${i + 1}) ${this.toPlaywrightName(s)}`)
       .join("\n");
 
-    return `You are an expert Playwright engineer. Generate Playwright locators and concise Page Object Model code.
+    const lang = options.language === "javascript" ? "JavaScript" : "TypeScript";
+    const isTS = lang === "TypeScript";
+    const includeActions = options.includeActions !== false; // default true
+    const includeDynamic = options.includeDynamicLocators === true;
+
+    const langOutputRules = isTS
+      ? `- Output syntactically correct TypeScript only; do not wrap in markdown fences.
+- Implement the class using private readonly Locator fields initialized in the constructor (not computed getters) for performance and clarity.
+- Import at the top: import { Page, Locator } from '@playwright/test';`
+      : `- Output syntactically correct JavaScript only; do NOT include TypeScript types, generics, or annotations.
+- Use plain ES2020 class syntax. All fields assigned in constructor as this.fieldName = page.getByXxx(...).
+- No import statements needed.`;
+
+    const actionRules = includeActions
+      ? `- Inputs/textareas/selects: create setters (fill/select) and getters when useful.
+- Buttons/links: create action methods like click/select.
+- Static content (headings/labels): only getters.
+- If both username and password fields exist, include a convenience method: async login(username${isTS ? ": string" : ""}, password${isTS ? ": string" : ""}).
+- Add two tiny helpers when applicable: async isForgotPasswordVisible(), async logoIsVisible().`
+      : `- Do NOT generate any action methods (click, fill, navigate, etc.) — only locator fields/properties.`;
+
+    const dynamicSection = includeDynamic
+      ? `\nDynamic/Parameterized Locators (REQUIRED — include in addition to regular fields):
+- Generate parameterized methods for tables, lists, cards, and repeating element patterns found on the page.
+- Row pattern: async getRowByText(text${isTS ? ": string" : ""})${isTS ? ": Locator" : ""} { return this.page.getByRole('row').filter({ hasText: text }); }
+- Card pattern: async getProductCard(index${isTS ? ": number" : ""})${isTS ? ": Locator" : ""} { return this.page.locator('[data-card], .card, .product').nth(index); }
+- List item: async getListItem(index${isTS ? ": number" : ""})${isTS ? ": Locator" : ""} { return this.page.locator('li').nth(index); }
+- Apply wherever repeating/dynamic content exists on the page.`
+      : "";
+
+    const ignoreRule = options.ignoreSections?.trim()
+      ? `\n- IMPORTANT: Completely ignore and do NOT generate locators for these sections: ${options.ignoreSections.trim()}.`
+      : "";
+
+    return `You are an expert ${lang} ${options.framework ?? "Playwright"} engineer. Generate production-ready ${lang} Page Object Model code.
 
 Goal:
-Given an HTML DOM source, component snippet, or page screenshot description, generate Playwright locators in TypeScript using the preferred built-in locator priority order. Also, generate corresponding getter and setter methods wherever applicable.
+Given an HTML DOM source, component snippet, or page description, generate locators using the preferred built-in locator priority order. Generate corresponding getter/setter/action methods where applicable.
 
 Locator Priority Order (highest first):
 ${orderReadable}
@@ -56,36 +94,29 @@ ${orderReadable}
 Rules:
 - Prefer semantic locators (role, text, label, placeholder, alt, title, testid) before CSS/XPath.
 - If an element has both visible text and role, prefer getByRole().
-- Inputs/textareas/selects: create setters (fill/select) and getters when useful.
-- Buttons/links: create action methods like click/select.
-- Static content (headings/labels): only getters.
+- For input fields with a placeholder attribute, prefer getByPlaceholder() over getByLabel() regardless of the global priority order.
 - Avoid dynamic ids, random classes, or auto-generated CSS; only use CSS/XPath if nothing semantic exists.
-- Use camelCase names and concise, production-ready POM.
-- Output syntactically correct TypeScript only; do not wrap in markdown fences.
+- Use camelCase names and concise, production-ready POM style.
+- For social links, prefer getByRole('link', { name: /LinkedIn|Facebook|Twitter|YouTube/i }) if accessible names are present; otherwise fall back to a[href*="linkedin.com"] etc.${ignoreRule}
+
+Action methods:
+${actionRules}
+${dynamicSection}
 
 Screenshot/image-specific rules:
-- Derive locator names ONLY from visible text in the image or explicit hints provided in the input. Do NOT invent placeholders or labels.
-- Prefer page.getByText('<exact visible text>') for static text, headings, and button/links with visible captions; use { exact: true } when appropriate.
-- If an input shows a placeholder text in the image, prefer page.getByPlaceholder('<placeholder text>').
-- If a clear label text is visibly adjacent to an input, you may use page.getByLabel('<label text>').
-- If none of (text/placeholder/label) is visible, use page.getByRole with a generic role and no name; only then consider page.locator with a minimal, stable selector.
+- Derive locator names ONLY from visible text in the image or explicit hints in the input. Do NOT invent placeholders or labels.
+- Prefer page.getByText('<exact visible text>') for static text, headings, and button/links; use { exact: true } when appropriate.
 - Never output text values that are not present in the provided image/input.
 
-Additional required conventions:
-- For input fields that have a placeholder attribute, prefer getByPlaceholder(...) over getByLabel(...) regardless of the global order.
-- Implement the class using private readonly Locator fields initialized in the constructor (not computed getters) for performance and clarity.
-- Always include action methods for inputs and buttons (e.g., set<Field>(), click<Button>()).
-- If both username and password fields exist, include a convenience method: async login(username: string, password: string).
-- Add two tiny helpers when applicable: async isForgotPasswordVisible(), async logoIsVisible().
-- For social links, prefer getByRole('link', { name: /LinkedIn|Facebook|Twitter|YouTube/i }) if accessible names are present; otherwise, fall back to CSS selectors like a[href*="linkedin.com"].
+${lang} output rules:
+${langOutputRules}
 
 Input:
 ${input}
 
 Output:
-- A single TypeScript class named based on the page context (fallback: GeneratedPage)
-- Import types if necessary (assume Playwright's Page is available in context)
-- Include locator fields and methods (setters/getters/actions)
+- A single ${lang} class named based on the page context (fallback: GeneratedPage)
+- Include locator fields and methods as configured above
 `;
   }
 

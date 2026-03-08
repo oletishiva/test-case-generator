@@ -96,12 +96,20 @@ export async function POST(req: NextRequest) {
       preferredStrategy = "role",
       framework = "playwright",
       groupIntoPOM = true,
+      language = "typescript",
+      includeActions = true,
+      includeDynamicLocators = false,
+      ignoreSections = "",
     } = body as {
       inputType: "html" | "url" | "describe";
       content: string;
       preferredStrategy: string;
       framework: string;
       groupIntoPOM: boolean;
+      language: string;
+      includeActions: boolean;
+      includeDynamicLocators: boolean;
+      ignoreSections: string;
     };
 
     if (!content.trim()) {
@@ -137,6 +145,10 @@ export async function POST(req: NextRequest) {
           preferredStrategy: preferredStrategy as LocatorServiceOptions["preferredStrategy"],
           framework: framework as LocatorServiceOptions["framework"],
           groupIntoPOM,
+          language: language as LocatorServiceOptions["language"],
+          includeActions,
+          includeDynamicLocators,
+          ignoreSections,
         });
         if (!code.trim()) throw new Error("Empty result");
         console.log(`✓ Locators generated with ${name}`);
