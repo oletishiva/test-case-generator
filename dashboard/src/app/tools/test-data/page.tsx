@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Plus, Trash2, Download, Copy, Check, Loader2, Database,
-  Sparkles, Code2, LayoutTemplate, ChevronDown, TestTube,
+  Sparkles, Code2, ChevronDown, TestTube,
   Settings2, AlertCircle, RefreshCw,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /* ── Types ───────────────────────────────────────────────── */
 type FieldDef = { id: string; name: string; type: string; options: string };
@@ -386,7 +385,7 @@ export default function TestDataPage() {
                 { id: "build", icon: Settings2, label: "Build" },
                 { id: "describe", icon: Sparkles, label: "Describe" },
                 { id: "schema", icon: Code2, label: "Schema" },
-              ] as { id: InputMode; icon: React.ElementType; label: string }[]).map(({ id, icon: Icon, label }) => (
+              ] as { id: InputMode; icon: ComponentType<{ style?: object }>; label: string }[]).map(({ id, icon: Icon, label }) => (
                 <button
                   key={id}
                   onClick={() => setMode(id)}
