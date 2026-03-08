@@ -1,19 +1,70 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState, useMemo, type ComponentType } from "react";
 import Link from "next/link";
 import {
   TestTube, Sparkles, Loader2, Copy, Check, Download,
   Code2, Globe, FileText, RefreshCw, Target, Zap,
-  ChevronDown, AlertCircle, MousePointerClick,
+  ChevronDown, ChevronUp, AlertCircle, MousePointerClick,
 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────── */
-type InputMode  = "html" | "url" | "describe";
-type Framework  = "playwright" | "cypress" | "selenium";
-type Strategy   = "role" | "text" | "label" | "placeholder" | "testid" | "css";
+type InputMode = "html" | "url" | "describe";
+type Framework = "playwright" | "cypress" | "selenium";
+type Strategy  = "role" | "text" | "label" | "placeholder" | "testid" | "css";
 
-/* ── Strategies ─────────────────────────────────────────────── */
+interface ParsedLocator { name: string; type: string; args: string; fullExpr: string; }
+interface ParsedMethod  { name: string; params: string; }
+
+/* ── Locator badge colours ─────────────────────────────────── */
+const LOCATOR_BADGES: Record<string, { bg: string; color: string; border: string }> = {
+  getByRole:        { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+  getByLabel:       { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+  getByPlaceholder: { bg: "#faf5ff", color: "#7c3aed", border: "#e9d5ff" },
+  getByText:        { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+  getByTestId:      { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+  getByAltText:     { bg: "#eef2ff", color: "#4338ca", border: "#c7d2fe" },
+  getByTitle:       { bg: "#fdf4ff", color: "#9333ea", border: "#f3e8ff" },
+  locator:          { bg: "#f8fafc", color: "#64748b", border: "#e2e8f0" },
+};
+
+/* ── Parse generated TypeScript POM into locators + methods ── */
+function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMethod[] } {
+  const locators: ParsedLocator[] = [];
+  const methods:  ParsedMethod[]  = [];
+  const seen = new Set<string>();
+
+  for (const line of code.split("\n")) {
+    // Match field declarations:  (private|public)? readonly? name = this.page.getByXxx(...)
+    const fm = line.match(
+      /^\s*(?:(?:private|public|protected)\s+)?(?:readonly\s+)?(\w+)\s*=\s*this\.page\.(getBy\w+|locator)\((.*)$/
+    );
+    if (fm) {
+      const [, name, type, rest] = fm;
+      if (!seen.has(`L:${name}`)) {
+        seen.add(`L:${name}`);
+        // Strip trailing ); from line
+        const args = rest.replace(/\);\s*$/, "").replace(/\)\s*$/, "").trim();
+        locators.push({ name, type, args, fullExpr: `this.page.${type}(${args})` });
+      }
+      continue;
+    }
+
+    // Match async method declarations
+    const mm = line.match(/^\s*async\s+(\w+)\s*\(([^)]*)\)/);
+    if (mm) {
+      const [, name, params] = mm;
+      if (!seen.has(`M:${name}`)) {
+        seen.add(`M:${name}`);
+        methods.push({ name, params });
+      }
+    }
+  }
+
+  return { locators, methods };
+}
+
+/* ── Config constants ────────────────────────────────────────── */
 const STRATEGIES: { value: Strategy; label: string; desc: string }[] = [
   { value: "role",        label: "getByRole",        desc: "Semantic — recommended" },
   { value: "label",       label: "getByLabel",       desc: "Form labels" },
@@ -24,12 +75,11 @@ const STRATEGIES: { value: Strategy; label: string; desc: string }[] = [
 ];
 
 const FRAMEWORKS: { value: Framework; label: string; color: string }[] = [
-  { value: "playwright", label: "Playwright",  color: "#2dd4bf" },
-  { value: "cypress",    label: "Cypress",     color: "#10b981" },
-  { value: "selenium",   label: "Selenium",    color: "#f59e0b" },
+  { value: "playwright", label: "Playwright", color: "#2dd4bf" },
+  { value: "cypress",    label: "Cypress",    color: "#10b981" },
+  { value: "selenium",   label: "Selenium",   color: "#f59e0b" },
 ];
 
-/* ── Example snippets ───────────────────────────────────────── */
 const HTML_EXAMPLE = `<form>
   <label for="email">Email</label>
   <input id="email" type="email" placeholder="you@example.com" />
@@ -44,10 +94,9 @@ const HTML_EXAMPLE = `<form>
 const DESCRIBE_EXAMPLES = [
   "A login page with email input, password input, Sign In button and Forgot Password link",
   "A checkout form with billing address, card number, expiry date, CVV and Pay Now button",
-  "A search results page with a search bar, filter dropdown, 10 product cards each with Add to Cart button",
+  "A search results page with a search bar, filter dropdown, 10 product cards each with Add to Cart",
 ];
 
-/* ── Helpers ─────────────────────────────────────────────────── */
 function downloadFile(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
   const url  = URL.createObjectURL(blob);
@@ -58,26 +107,32 @@ function downloadFile(content: string, filename: string) {
 
 /* ── Page ────────────────────────────────────────────────────── */
 export default function LocatorsPage() {
-  const [mode,         setMode]         = useState<InputMode>("html");
-  const [htmlInput,    setHtmlInput]    = useState("");
-  const [urlInput,     setUrlInput]     = useState("");
-  const [description,  setDescription]  = useState("");
-  const [framework,    setFramework]    = useState<Framework>("playwright");
-  const [strategy,     setStrategy]     = useState<Strategy>("role");
-  const [groupPOM,     setGroupPOM]     = useState(true);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState("");
-  const [code,         setCode]         = useState("");
-  const [provider,     setProvider]     = useState("");
-  const [copied,       setCopied]       = useState(false);
+  const [mode,        setMode]        = useState<InputMode>("html");
+  const [htmlInput,   setHtmlInput]   = useState("");
+  const [urlInput,    setUrlInput]    = useState("");
+  const [description, setDescription] = useState("");
+  const [framework,   setFramework]   = useState<Framework>("playwright");
+  const [strategy,    setStrategy]    = useState<Strategy>("role");
+  const [groupPOM,    setGroupPOM]    = useState(true);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+  const [code,        setCode]        = useState("");
+  const [provider,    setProvider]    = useState("");
+  const [copied,      setCopied]      = useState(false);
+  const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
+  const [tableOpen,   setTableOpen]   = useState(true);
 
   const hasCode = code.trim().length > 0;
 
-  /* derive class name from first line of code */
   const className = (() => {
     const m = code.match(/export\s+(?:default\s+)?class\s+(\w+)/);
     return m ? m[1] : null;
   })();
+
+  const { locators: parsedLocators, methods: parsedMethods } = useMemo(
+    () => (code ? parseCode(code) : { locators: [], methods: [] }),
+    [code]
+  );
 
   async function generate() {
     setError("");
@@ -93,7 +148,7 @@ export default function LocatorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           inputType: mode,
-          content: content.trim(),
+          content:   content.trim(),
           preferredStrategy: strategy,
           framework,
           groupIntoPOM: groupPOM,
@@ -103,6 +158,7 @@ export default function LocatorsPage() {
       if (!res.ok || json.error) throw new Error(json.error || "Generation failed");
       setCode(json.code);
       setProvider(json.provider);
+      setTableOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -116,10 +172,16 @@ export default function LocatorsPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function copyRow(id: string, text: string) {
+    await navigator.clipboard.writeText(text);
+    setCopiedRowId(id);
+    setTimeout(() => setCopiedRowId(null), 1500);
+  }
+
   const INPUT_TABS: { id: InputMode; icon: ComponentType<{ style?: React.CSSProperties }>; label: string }[] = [
-    { id: "html",     icon: FileText,         label: "HTML Source" },
-    { id: "url",      icon: Globe,            label: "URL" },
-    { id: "describe", icon: Sparkles,         label: "Describe" },
+    { id: "html",     icon: FileText, label: "HTML Source" },
+    { id: "url",      icon: Globe,    label: "URL" },
+    { id: "describe", icon: Sparkles, label: "Describe" },
   ];
 
   return (
@@ -146,6 +208,7 @@ export default function LocatorsPage() {
       <div style={{ background: "linear-gradient(135deg,#0a0f1e 0%,#0c1a2e 50%,#0a1a1e 100%)", padding: "44px 24px 52px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(45,212,191,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(45,212,191,0.04) 1px,transparent 1px)", backgroundSize: "40px 40px", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: -80, right: "10%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle,rgba(45,212,191,0.12) 0%,transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -60, left: "5%", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle,rgba(96,165,250,0.08) 0%,transparent 70%)", pointerEvents: "none" }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)", borderRadius: 20, padding: "5px 14px", marginBottom: 20 }}>
@@ -165,9 +228,9 @@ export default function LocatorsPage() {
 
           <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
             {[
-              { n: "3",  l: "Input modes" },
-              { n: "3",  l: "Frameworks" },
-              { n: "6",  l: "Strategies" },
+              { n: "3",   l: "Input modes" },
+              { n: "3",   l: "Frameworks" },
+              { n: "6",   l: "Strategies" },
               { n: "POM", l: "Auto-generated" },
             ].map(({ n, l }) => (
               <div key={l} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "10px 18px", textAlign: "center", minWidth: 80 }}>
@@ -187,7 +250,6 @@ export default function LocatorsPage() {
 
           {/* Input tabs */}
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-            {/* Tab bar */}
             <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0" }}>
               {INPUT_TABS.map(({ id, icon: Icon, label }) => (
                 <button
@@ -209,7 +271,7 @@ export default function LocatorsPage() {
               ))}
             </div>
 
-            <div style={{ padding: "18px 18px" }}>
+            <div style={{ padding: "18px" }}>
               {/* HTML mode */}
               {mode === "html" && (
                 <div>
@@ -229,6 +291,9 @@ export default function LocatorsPage() {
                     rows={12}
                     style={{ width: "100%", fontSize: 12, fontFamily: "'Fira Code',monospace", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", lineHeight: 1.65, resize: "vertical", color: "#0f172a", outline: "none", background: "#f8fafc", boxSizing: "border-box" }}
                   />
+                  <p style={{ fontSize: 11, color: "#94a3b8", margin: "6px 0 0", textAlign: "right" }}>
+                    {htmlInput.length > 0 ? `${htmlInput.length.toLocaleString()} chars` : ""}
+                  </p>
                 </div>
               )}
 
@@ -288,7 +353,7 @@ export default function LocatorsPage() {
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "18px", marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.8px", margin: "0 0 16px" }}>Configuration</p>
 
-            {/* Framework selector */}
+            {/* Framework */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "block", marginBottom: 8 }}>Framework</label>
               <div style={{ display: "flex", gap: 8 }}>
@@ -311,7 +376,7 @@ export default function LocatorsPage() {
               </div>
             </div>
 
-            {/* Strategy selector */}
+            {/* Strategy */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "block", marginBottom: 8 }}>Locator Strategy Priority</label>
               <div style={{ position: "relative" }}>
@@ -413,17 +478,24 @@ export default function LocatorsPage() {
               </div>
             </div>
           ) : (
-            /* Results */
             <div>
-              {/* Toolbar */}
+              {/* ── Toolbar ── */}
               <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
                     {className ? `class ${className}` : "Page Object generated"}
                   </span>
                   <span style={{ fontSize: 11, color: "#94a3b8" }}>via {provider}</span>
                 </div>
+
+                {/* Stats badge */}
+                {parsedLocators.length > 0 && (
+                  <span style={{ fontSize: 11, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 20, padding: "2px 10px", fontWeight: 600, color: "#475569" }}>
+                    {parsedLocators.length} locator{parsedLocators.length !== 1 ? "s" : ""}
+                    {parsedMethods.length > 0 ? ` · ${parsedMethods.length} method${parsedMethods.length !== 1 ? "s" : ""}` : ""}
+                  </span>
+                )}
 
                 <span style={{ fontSize: 11, background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 20, padding: "2px 10px", fontWeight: 600, color: "#0d9488" }}>
                   {framework} · {strategy}
@@ -455,7 +527,108 @@ export default function LocatorsPage() {
                 </div>
               </div>
 
-              {/* Code panel — macOS style */}
+              {/* ── Locator Breakdown Table ── */}
+              {parsedLocators.length > 0 && (
+                <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", marginBottom: 14, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                  {/* Table header / toggle */}
+                  <button
+                    onClick={() => setTableOpen(!tableOpen)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", borderBottom: tableOpen ? "1px solid #e2e8f0" : "none", cursor: "pointer", background: "#f8fafc", border: "none", textAlign: "left" }}
+                  >
+                    <Target style={{ width: 14, height: 14, color: "#0d9488", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Locator Breakdown</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                      {parsedLocators.length} field{parsedLocators.length !== 1 ? "s" : ""}
+                      {parsedMethods.length > 0 ? ` · ${parsedMethods.length} method${parsedMethods.length !== 1 ? "s" : ""}` : ""}
+                    </span>
+                    <div style={{ marginLeft: "auto", color: "#94a3b8" }}>
+                      {tableOpen
+                        ? <ChevronUp style={{ width: 14, height: 14 }} />
+                        : <ChevronDown style={{ width: 14, height: 14 }} />}
+                    </div>
+                  </button>
+
+                  {tableOpen && (
+                    <div>
+                      {/* Locator rows */}
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ background: "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
+                              <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 600, color: "#94a3b8", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>Field</th>
+                              <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 600, color: "#94a3b8", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>Type</th>
+                              <th style={{ textAlign: "left", padding: "8px 16px", fontWeight: 600, color: "#94a3b8", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px" }}>Expression</th>
+                              <th style={{ padding: "8px 16px", width: 72 }} />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {parsedLocators.map((row, i) => {
+                              const badge = LOCATOR_BADGES[row.type] ?? LOCATOR_BADGES.locator;
+                              return (
+                                <tr key={row.name} style={{ background: i % 2 === 0 ? "#fff" : "#fafbfc", borderBottom: "1px solid #f1f5f9" }}>
+                                  <td style={{ padding: "9px 16px", fontFamily: "'Fira Code',monospace", fontSize: 12, color: "#0f172a", whiteSpace: "nowrap", fontWeight: 500 }}>
+                                    {row.name}
+                                  </td>
+                                  <td style={{ padding: "9px 16px", whiteSpace: "nowrap" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>
+                                      {row.type}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "9px 16px", maxWidth: 340 }}>
+                                    <code style={{ fontSize: 11, color: "#475569", fontFamily: "'Fira Code',monospace", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      ({row.args.length > 70 ? row.args.slice(0, 70) + "…" : row.args})
+                                    </code>
+                                  </td>
+                                  <td style={{ padding: "9px 16px", textAlign: "right" }}>
+                                    <button
+                                      onClick={() => copyRow(row.name, row.fullExpr)}
+                                      style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "3px 9px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff", fontSize: 11, fontWeight: 600, color: "#64748b", cursor: "pointer", whiteSpace: "nowrap" }}
+                                    >
+                                      {copiedRowId === row.name
+                                        ? <><Check style={{ width: 10, height: 10, color: "#10b981" }} /> ✓</>
+                                        : <><Copy style={{ width: 10, height: 10 }} /> Copy</>}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Methods row */}
+                      {parsedMethods.length > 0 && (
+                        <div style={{ padding: "10px 16px", borderTop: "1px solid #f1f5f9", background: "#fafbfc", display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginRight: 2 }}>Methods</span>
+                          {parsedMethods.map((m) => {
+                            const mid = `method:${m.name}`;
+                            return (
+                              <button
+                                key={m.name}
+                                onClick={() => copyRow(mid, `await page.${m.name}(${m.params})`)}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  fontSize: 11, fontWeight: 600, padding: "3px 10px",
+                                  borderRadius: 20, background: "#fff", border: "1px solid #e2e8f0",
+                                  color: "#475569", cursor: "pointer", fontFamily: "'Fira Code',monospace",
+                                  transition: "all 0.12s",
+                                }}
+                              >
+                                {copiedRowId === mid
+                                  ? <Check style={{ width: 9, height: 9, color: "#10b981" }} />
+                                  : <Copy style={{ width: 9, height: 9 }} />}
+                                {m.name}()
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Code panel — macOS style ── */}
               <div style={{ background: "#0d1117", borderRadius: 14, border: "1px solid #21262d", overflow: "hidden", boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
                 <div style={{ display: "flex", alignItems: "center", padding: "10px 16px", borderBottom: "1px solid #21262d", background: "#161b22", gap: 8 }}>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -479,22 +652,24 @@ export default function LocatorsPage() {
                   color: "#e6edf3",
                   fontFamily: "'Fira Code','JetBrains Mono','Cascadia Code',monospace",
                   overflowX: "auto",
-                  maxHeight: "calc(100vh - 320px)",
+                  maxHeight: "calc(100vh - 280px)",
                   overflowY: "auto",
                 }}>
                   {code}
                 </pre>
               </div>
 
-              {/* Usage tip */}
+              {/* ── Usage tip ── */}
               <div style={{ marginTop: 14, background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 12, padding: "14px 16px", display: "flex", gap: 10 }}>
                 <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
                 <div>
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>How to use this Page Object</p>
                   <p style={{ fontSize: 12, color: "#475569", margin: 0, lineHeight: 1.6 }}>
-                    Download the <code style={{ background: "#ccfbf1", padding: "1px 5px", borderRadius: 4, color: "#0d9488", fontFamily: "monospace" }}>.ts</code> file and import it into your test:
-                    {" "}<code style={{ background: "#ccfbf1", padding: "1px 5px", borderRadius: 4, color: "#0d9488", fontFamily: "monospace", fontSize: 11 }}>
-                      const page = new {className ?? "GeneratedPage"}(page);
+                    Download the{" "}
+                    <code style={{ background: "#ccfbf1", padding: "1px 5px", borderRadius: 4, color: "#0d9488", fontFamily: "monospace" }}>.ts</code>
+                    {" "}file and import it in your test:{" "}
+                    <code style={{ background: "#ccfbf1", padding: "1px 5px", borderRadius: 4, color: "#0d9488", fontFamily: "monospace", fontSize: 11 }}>
+                      const po = new {className ?? "GeneratedPage"}(page);
                     </code>
                   </p>
                 </div>
