@@ -174,6 +174,8 @@ export default function LocatorsPage() {
   const [elementsOpen,  setElementsOpen]  = useState(true);
   const [awaitMode,     setAwaitMode]     = useState(false);
   const [smokeVisible,  setSmokeVisible]  = useState(false);
+  const [selectedRows,  setSelectedRows]  = useState<Set<string>>(new Set());
+  const [copiedSel,     setCopiedSel]     = useState(false);
 
   const hasCode = code.trim().length > 0;
   const ext = language === "javascript" ? "js" : "ts";
@@ -231,6 +233,7 @@ export default function LocatorsPage() {
       setTableOpen(true);
       setElementsOpen(true);
       setSmokeVisible(false);
+      setSelectedRows(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -254,6 +257,29 @@ export default function LocatorsPage() {
   function getRowCopyText(row: ParsedLocator): string {
     if (awaitMode) return `const ${row.name} = await this.page.${row.type}(${row.args});`;
     return row.fullExpr;
+  }
+
+  /* Selection helpers */
+  function toggleRow(name: string) {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  }
+  function selectAll()   { setSelectedRows(new Set(parsedLocators.map(l => l.name))); }
+  function deselectAll() { setSelectedRows(new Set()); }
+
+  async function copySelected() {
+    const rows = parsedLocators.filter(l => selectedRows.has(l.name));
+    const lines = rows.map(r =>
+      language === "javascript"
+        ? `  this.${r.name} = this.page.${r.type}(${r.args});`
+        : `  private readonly ${r.name} = this.page.${r.type}(${r.args});`
+    ).join("\n");
+    await navigator.clipboard.writeText(lines);
+    setCopiedSel(true);
+    setTimeout(() => setCopiedSel(false), 2000);
   }
 
   const INPUT_TABS: { id: InputMode; icon: ComponentType<{ style?: React.CSSProperties }>; label: string }[] = [
@@ -632,19 +658,39 @@ export default function LocatorsPage() {
               {/* ── Locator Breakdown Table ── */}
               {parsedLocators.length > 0 && (
                 <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", marginBottom: 12, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                  <button onClick={() => setTableOpen(!tableOpen)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: tableOpen ? "1px solid #e2e8f0" : "none", cursor: "pointer", background: "#f8fafc", border: "none", textAlign: "left" }}>
-                    <Target style={{ width: 13, height: 13, color: "#0d9488", flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Locator Breakdown</span>
-                    {awaitMode && <span style={{ fontSize: 10, fontWeight: 700, background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe", borderRadius: 10, padding: "1px 7px" }}>⚡ await mode</span>}
-                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{parsedLocators.length} fields</span>
-                    <div style={{ marginLeft: "auto", color: "#94a3b8" }}>{tableOpen ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}</div>
-                  </button>
+                  {/* Table header row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: tableOpen ? "1px solid #e2e8f0" : "none", background: "#f8fafc" }}>
+                    <button onClick={() => setTableOpen(!tableOpen)} style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
+                      <Target style={{ width: 13, height: 13, color: "#0d9488", flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Locator Breakdown</span>
+                      {awaitMode && <span style={{ fontSize: 10, fontWeight: 700, background: "#eef2ff", color: "#4338ca", border: "1px solid #c7d2fe", borderRadius: 10, padding: "1px 7px" }}>⚡ await mode</span>}
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>{parsedLocators.length} fields</span>
+                      <span style={{ color: "#94a3b8" }}>{tableOpen ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}</span>
+                    </button>
+                    {/* Selection controls — always visible when table is open */}
+                    {tableOpen && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        {selectedRows.size > 0 && (
+                          <button
+                            onClick={copySelected}
+                            style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 11px", border: "none", borderRadius: 7, background: copiedSel ? "#10b981" : "#0d9488", fontSize: 11, fontWeight: 700, color: "#fff", cursor: "pointer", transition: "background 0.2s" }}
+                          >
+                            {copiedSel ? <><Check style={{ width: 10, height: 10 }} /> Copied!</> : <><Copy style={{ width: 10, height: 10 }} /> Copy Selected ({selectedRows.size})</>}
+                          </button>
+                        )}
+                        <button onClick={selectedRows.size === parsedLocators.length ? deselectAll : selectAll} style={{ fontSize: 11, fontWeight: 600, color: "#64748b", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
+                          {selectedRows.size === parsedLocators.length ? "Deselect All" : "Select All"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {tableOpen && (
                     <div>
                       <div style={{ overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                           <thead>
                             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #f1f5f9" }}>
+                              <th style={{ padding: "8px 6px 8px 14px", width: 32 }} />
                               {["Field", "Type", "Expression", "Resilience", ""].map((h) => (
                                 <th key={h} style={{ textAlign: "left", padding: "8px 14px", fontWeight: 600, color: "#94a3b8", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
                               ))}
@@ -655,7 +701,15 @@ export default function LocatorsPage() {
                               const badge = LOCATOR_BADGES[row.type] ?? LOCATOR_BADGES.locator;
                               const res   = getResilience(row.type);
                               return (
-                                <tr key={row.name} style={{ background: i % 2 === 0 ? "#fff" : "#fafbfc", borderBottom: "1px solid #f1f5f9" }}>
+                                <tr key={row.name} style={{ background: selectedRows.has(row.name) ? "#f0fdfa" : i % 2 === 0 ? "#fff" : "#fafbfc", borderBottom: "1px solid #f1f5f9", transition: "background 0.1s" }}>
+                                  <td style={{ padding: "9px 6px 9px 14px", width: 32 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedRows.has(row.name)}
+                                      onChange={() => toggleRow(row.name)}
+                                      style={{ width: 14, height: 14, accentColor: "#0d9488", cursor: "pointer" }}
+                                    />
+                                  </td>
                                   <td style={{ padding: "9px 14px", fontFamily: "'Fira Code',monospace", fontSize: 12, color: "#0f172a", whiteSpace: "nowrap", fontWeight: 500 }}>{row.name}</td>
                                   <td style={{ padding: "9px 14px", whiteSpace: "nowrap" }}>
                                     <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 6, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>{row.type}</span>
