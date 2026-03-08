@@ -44,7 +44,7 @@ async function withGemini(prompt: string): Promise<string> {
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { maxOutputTokens: 4000, temperature: 0.1 },
+          generationConfig: { maxOutputTokens: 8192, temperature: 0.1 },
         });
         const result = await model.generateContent(prompt);
         const text = result?.response?.text?.() ?? "";
@@ -69,7 +69,7 @@ async function withAnthropic(prompt: string): Promise<string> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{ role: "user", content: prompt }],
   });
   const c = msg.content[0];
@@ -80,7 +80,7 @@ async function withOpenAI(prompt: string): Promise<string> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{ role: "user", content: prompt }],
   });
   return completion.choices[0]?.message?.content ?? "";

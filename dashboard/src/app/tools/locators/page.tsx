@@ -55,6 +55,16 @@ function categoriseLocator(name: string, type: string, args: string): "button" |
   return "other";
 }
 
+/* ── Normalise raw args string from a matched line ───────────── */
+function cleanArgs(raw: string): string {
+  // Remove trailing chained calls: .first(), .last(), .nth(n)
+  let a = raw.replace(/\)\.(?:first|last)\(\)\s*;?\s*$/, ")");
+  a = a.replace(/\)\.nth\(\d+\)\s*;?\s*$/, ")");
+  // Remove trailing ); or )
+  a = a.replace(/\);\s*$/, "").replace(/\)\s*$/, "").trim();
+  return a;
+}
+
 /* ── Parse generated TypeScript / JavaScript POM ────────────── */
 function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMethod[] } {
   const locators: ParsedLocator[] = [];
@@ -62,14 +72,22 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
   const seen = new Set<string>();
 
   for (const line of code.split("\n")) {
-    const fm = line.match(
+    // Pattern A — field initializer:  name = this.page.getByXxx(...)
+    const fmA = line.match(
       /^\s*(?:(?:private|public|protected)\s+)?(?:readonly\s+)?(\w+)\s*=\s*this\.page\.(getBy\w+|locator)\((.*)$/
     );
+    // Pattern B — constructor assignment:  this.name = page.getByXxx(...)
+    //             also handles:           this.name = this.page.getByXxx(...)
+    const fmB = !fmA && line.match(
+      /^\s*this\.(\w+)\s*=\s*(?:this\.)?page\.(getBy\w+|locator)\((.*)$/
+    );
+
+    const fm = fmA ?? fmB;
     if (fm) {
       const [, name, type, rest] = fm;
       if (!seen.has(`L:${name}`)) {
         seen.add(`L:${name}`);
-        const args = rest.replace(/\);\s*$/, "").replace(/\)\s*$/, "").trim();
+        const args = cleanArgs(rest);
         locators.push({
           name, type, args,
           fullExpr: `this.page.${type}(${args})`,
@@ -78,6 +96,7 @@ function parseCode(code: string): { locators: ParsedLocator[]; methods: ParsedMe
       }
       continue;
     }
+
     const mm = line.match(/^\s*async\s+(\w+)\s*\(([^)]*)\)/);
     if (mm) {
       const [, name, params] = mm;
