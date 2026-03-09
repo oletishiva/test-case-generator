@@ -20,7 +20,7 @@ const NAV_TOOLS = [
   { label: "Test Data Generator", desc: "Create schema-aware test data", icon: Database, href: "/tools/test-data" },
   { label: "Resume Builder", desc: "ATS-optimised QA resumes", icon: FileText, href: "/resume-builder" },
   { label: "Code Converter", desc: "Translate across 50+ frameworks", icon: RefreshCw, href: "/dashboard" },
-  { label: "Interview Prep", desc: "500+ QA interview questions", icon: GraduationCap, href: "/blog" },
+  { label: "Interview Prep", desc: "500+ QA interview questions", icon: GraduationCap, href: "/tools/interview-prep" },
 ];
 
 /* ─── Hero content per audience ──────────────────────────── */
@@ -113,7 +113,7 @@ const TOOLS = [
     icon: GraduationCap,
     name: "Interview Prep",
     desc: "500+ QA interview questions with model answers. Covers manual testing, automation, BDD, CI/CD and more.",
-    href: "/blog",
+    href: "/tools/interview-prep",
     audience: "Candidates",
     audienceCls: "bg-amber-100 text-amber-700",
     color: "#d97706",
@@ -198,7 +198,7 @@ const FOOTER_COLS = [
     heading: "For Candidates",
     links: [
       { label: "Resume Builder", href: "/resume-builder" },
-      { label: "Interview Prep", href: "/blog" },
+      { label: "Interview Prep", href: "/tools/interview-prep" },
       { label: "Code Converter", href: "/dashboard" },
       { label: "Blog & Guides", href: "/blog" },
     ],
