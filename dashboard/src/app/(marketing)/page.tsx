@@ -19,7 +19,7 @@ const NAV_TOOLS = [
   { label: "Locator Capture", desc: "Auto-generate robust selectors", icon: Target, href: "/tools/locators" },
   { label: "Test Data Generator", desc: "Create schema-aware test data", icon: Database, href: "/tools/test-data" },
   { label: "Resume Builder", desc: "ATS-optimised QA resumes", icon: FileText, href: "/resume-builder" },
-  { label: "Code Converter", desc: "Translate across 50+ frameworks", icon: RefreshCw, href: "/dashboard" },
+  { label: "Code Converter", desc: "Translate across 50+ frameworks", icon: RefreshCw, href: "/tools/code-converter" },
   { label: "Interview Prep", desc: "500+ QA interview questions", icon: GraduationCap, href: "/tools/interview-prep" },
 ];
 
@@ -101,7 +101,7 @@ const TOOLS = [
     icon: RefreshCw,
     name: "Code Converter",
     desc: "Translate test code across 50+ frameworks instantly. Selenium → Playwright. Java → Python. TestNG → Cypress.",
-    href: "/dashboard",
+    href: "/tools/code-converter",
     audience: "Candidates",
     audienceCls: "bg-orange-100 text-orange-700",
     color: "#ea580c",
@@ -182,7 +182,7 @@ const FOOTER_COLS = [
       { label: "Locator Capture", href: "/tools/locators" },
       { label: "Test Data Generator", href: "/tools/test-data" },
       { label: "Resume Builder", href: "/resume-builder" },
-      { label: "Code Converter", href: "/dashboard" },
+      { label: "Code Converter", href: "/tools/code-converter" },
     ],
   },
   {
@@ -199,7 +199,7 @@ const FOOTER_COLS = [
     links: [
       { label: "Resume Builder", href: "/resume-builder" },
       { label: "Interview Prep", href: "/tools/interview-prep" },
-      { label: "Code Converter", href: "/dashboard" },
+      { label: "Code Converter", href: "/tools/code-converter" },
       { label: "Blog & Guides", href: "/blog" },
     ],
   },
