@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { LayoutDashboard, ClipboardList, Briefcase, Zap } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Briefcase, Zap, Menu, X } from "lucide-react";
 
 const NAV = [
   { href: "/recruiter/dashboard",   label: "Dashboard",   icon: LayoutDashboard },
@@ -13,9 +14,34 @@ const NAV = [
 
 export default function RecruiterLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const NavLinks = ({ onClickLink }: { onClickLink?: () => void }) => (
+    <>
+      {NAV.map(({ href, label, icon: Icon }) => {
+        const active = pathname === href || (href !== "/recruiter/dashboard" && pathname.startsWith(href));
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onClickLink}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              active ? "bg-blue-600/20 text-blue-300 font-medium" : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            <Icon className="w-4 h-4 flex-shrink-0" />
+            {label}
+          </Link>
+        );
+      })}
+    </>
+  );
+
   return (
     <div className="flex h-screen bg-slate-950">
-      <aside className="w-60 flex-shrink-0 border-r border-slate-800 flex flex-col">
+
+      {/* ── Desktop sidebar (hidden on mobile) ── */}
+      <aside className="hidden md:flex w-60 flex-shrink-0 border-r border-slate-800 flex-col">
         <div className="p-5 border-b border-slate-800">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
@@ -28,28 +54,71 @@ export default function RecruiterLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href !== "/recruiter/dashboard" && pathname.startsWith(href));
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  active ? "bg-blue-600/20 text-blue-300 font-medium" : "text-slate-400 hover:text-white hover:bg-slate-800"
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
+          <NavLinks />
         </nav>
         <div className="p-4 border-t border-slate-800 flex items-center gap-3">
           <UserButton afterSignOutUrl="/" />
           <span className="text-slate-400 text-xs">Account</span>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto">{children}</main>
+
+      {/* ── Mobile drawer overlay ── */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile slide-in drawer ── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transform transition-transform duration-200 md:hidden ${
+          drawerOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2" onClick={() => setDrawerOpen(false)}>
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+              <Zap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-white font-bold text-sm">AITestCraft</span>
+          </Link>
+          <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-white p-1">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="px-3 py-2">
+          <span className="text-xs text-blue-400 font-medium bg-blue-500/10 rounded-full px-2 py-0.5 inline-block">
+            Recruiter
+          </span>
+        </div>
+        <nav className="flex-1 p-3 space-y-1">
+          <NavLinks onClickLink={() => setDrawerOpen(false)} />
+        </nav>
+        <div className="p-4 border-t border-slate-800 flex items-center gap-3">
+          <UserButton afterSignOutUrl="/" />
+          <span className="text-slate-400 text-xs">Account</span>
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Mobile top bar */}
+        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900 flex-shrink-0">
+          <button onClick={() => setDrawerOpen(true)} className="text-slate-400 hover:text-white p-1">
+            <Menu className="w-5 h-5" />
+          </button>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
+              <Zap className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-white font-bold text-sm">AITestCraft</span>
+          </Link>
+          <UserButton afterSignOutUrl="/" />
+        </header>
+
+        <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

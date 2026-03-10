@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Mic, Send, Loader2, Clock, MessageSquare, AlertCircle, LogOut } from "lucide-react";
+import { Mic, Send, Loader2, Clock, MessageSquare, AlertCircle, LogOut, Square, RefreshCw, MicOff } from "lucide-react";
 
 type Message = { role: "ai" | "candidate"; content: string; timestamp: string };
 
@@ -19,6 +19,36 @@ function useCountdown(startedAt: string | null, limitMinutes = 15) {
   return secondsLeft;
 }
 
+// Detect browser speech support
+const getSpeechRecognition = () => {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
+    .SpeechRecognition as (new () => SpeechRecognition) | undefined
+    ?? (window as unknown as { webkitSpeechRecognition?: unknown })
+      .webkitSpeechRecognition as (new () => SpeechRecognition) | undefined
+    ?? null;
+};
+
+function speakText(text: string) {
+  if (typeof window === "undefined") return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.92;
+  utter.pitch = 1.0;
+  const doSpeak = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find((v) => v.lang.startsWith("en") && !v.localService) ??
+      voices.find((v) => v.lang.startsWith("en")) ?? null;
+    if (preferred) utter.voice = preferred;
+    window.speechSynthesis.speak(utter);
+  };
+  if (window.speechSynthesis.getVoices().length > 0) {
+    doSpeak();
+  } else {
+    window.speechSynthesis.addEventListener("voiceschanged", doSpeak, { once: true });
+  }
+}
+
 export default function HRInterviewSessionPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -29,15 +59,30 @@ export default function HRInterviewSessionPage() {
   const [status, setStatus] = useState<"in_progress" | "completed">("in_progress");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [answer, setAnswer] = useState("");
   const [thinking, setThinking] = useState(false);
   const [ending, setEnding] = useState(false);
 
+  // Voice state
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [voiceState, setVoiceState] = useState<"idle" | "recording">("idle");
+  const [transcript, setTranscript] = useState(""); // live interim + final
+  const [finalText, setFinalText] = useState("");   // committed final text
+  const [speechError, setSpeechError] = useState("");
+  // Fallback text (for non-speech browsers)
+  const [fallbackText, setFallbackText] = useState("");
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoEndedRef = useRef(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const finalTextRef = useRef(""); // keep ref in sync for use in recognition callbacks
+  const prevMsgLenRef = useRef(0);
 
   const secondsLeft = useCountdown(startedAt, 15);
+
+  // Detect speech support on mount
+  useEffect(() => {
+    setSpeechSupported(!!getSpeechRecognition());
+  }, []);
 
   // Load session
   useEffect(() => {
@@ -50,13 +95,29 @@ export default function HRInterviewSessionPage() {
         setQuestionCount(s.question_count ?? 0);
         setStartedAt(s.started_at);
         setStatus(s.status);
+        prevMsgLenRef.current = (s.conversation ?? []).length;
         if (s.status === "completed") router.replace(`/candidate/hr-interview/${id}/results`);
       })
       .catch(() => setError("Failed to load interview"))
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  // Auto-scroll to bottom on new messages
+  // Speak new AI messages
+  useEffect(() => {
+    const newMsgs = messages.slice(prevMsgLenRef.current);
+    prevMsgLenRef.current = messages.length;
+    const lastAI = [...newMsgs].reverse().find((m) => m.role === "ai");
+    if (lastAI) speakText(lastAI.content);
+  }, [messages]);
+
+  // Cancel speech on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
@@ -70,13 +131,78 @@ export default function HRInterviewSessionPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
-  async function sendAnswer() {
-    if (!answer.trim() || thinking) return;
-    const myAnswer = answer.trim();
-    setAnswer("");
+  function startRecording() {
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) return;
+    setSpeechError("");
+    setTranscript("");
+    setFinalText("");
+    finalTextRef.current = "";
 
-    // Optimistically add candidate message
-    const candidateMsg: Message = { role: "candidate", content: myAnswer, timestamp: new Date().toISOString() };
+    // Cancel any ongoing AI speech
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = "";
+      let newFinal = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          newFinal += result[0].transcript + " ";
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      finalTextRef.current += newFinal;
+      setFinalText(finalTextRef.current);
+      setTranscript(finalTextRef.current + interim);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === "not-allowed") {
+        setSpeechError("Microphone access denied. Please allow microphone access in your browser settings.");
+      } else if (event.error === "no-speech") {
+        setSpeechError("No speech detected. Tap the mic and speak clearly.");
+      } else if (event.error === "network") {
+        setSpeechError("Network error with speech service. Try again.");
+      } else {
+        setSpeechError(`Speech error: ${event.error}`);
+      }
+      setVoiceState("idle");
+    };
+
+    recognition.onend = () => {
+      setVoiceState("idle");
+    };
+
+    recognition.start();
+    setVoiceState("recording");
+  }
+
+  function stopRecording() {
+    recognitionRef.current?.stop();
+    setVoiceState("idle");
+  }
+
+  const sendAnswer = useCallback(async () => {
+    const text = speechSupported ? finalTextRef.current.trim() : fallbackText.trim();
+    if (!text || thinking || ending) return;
+
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+    setFinalText("");
+    setTranscript("");
+    finalTextRef.current = "";
+    setFallbackText("");
+    setSpeechError("");
+
+    const candidateMsg: Message = { role: "candidate", content: text, timestamp: new Date().toISOString() };
     setMessages((prev) => [...prev, candidateMsg]);
     setThinking(true);
 
@@ -84,7 +210,7 @@ export default function HRInterviewSessionPage() {
       const res = await fetch(`/api/hr-interview/${id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer: myAnswer }),
+        body: JSON.stringify({ answer: text }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
@@ -102,11 +228,14 @@ export default function HRInterviewSessionPage() {
       setError(err instanceof Error ? err.message : "Failed to send answer");
       setThinking(false);
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, thinking, ending, speechSupported, fallbackText]);
 
   async function endInterview() {
     if (ending) return;
     setEnding(true);
+    if (typeof window !== "undefined") window.speechSynthesis.cancel();
+    recognitionRef.current?.stop();
     try {
       await fetch(`/api/hr-interview/${id}/end`, { method: "POST" });
       router.push(`/candidate/hr-interview/${id}/results`);
@@ -119,6 +248,8 @@ export default function HRInterviewSessionPage() {
   const timerDisplay = secondsLeft != null
     ? `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`
     : "--:--";
+
+  const hasTranscript = (finalText.trim() || transcript.trim()).length > 0;
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-slate-950">
@@ -175,19 +306,16 @@ export default function HRInterviewSessionPage() {
                 <Mic className="w-3.5 h-3.5 text-indigo-400" />
               </div>
             )}
-            <div
-              className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === "ai"
-                  ? "bg-slate-800 text-slate-100 rounded-tl-sm"
-                  : "bg-indigo-600 text-white rounded-tr-sm"
-              }`}
-            >
+            <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              msg.role === "ai"
+                ? "bg-slate-800 text-slate-100 rounded-tl-sm"
+                : "bg-indigo-600 text-white rounded-tr-sm"
+            }`}>
               {msg.content}
             </div>
           </div>
         ))}
 
-        {/* Thinking indicator */}
         {thinking && (
           <div className="flex justify-start">
             <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
@@ -199,33 +327,122 @@ export default function HRInterviewSessionPage() {
             </div>
           </div>
         )}
-
         <div ref={bottomRef} />
       </div>
 
       {/* Input area */}
-      <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 px-4 py-4">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          <textarea
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAnswer(); }
-            }}
-            disabled={thinking || ending}
-            placeholder="Type your answer… (Enter to send, Shift+Enter for new line)"
-            rows={3}
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-          />
-          <button
-            onClick={sendAnswer}
-            disabled={!answer.trim() || thinking || ending}
-            className="flex-shrink-0 w-12 h-12 self-end rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {thinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
+      <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 px-4 py-5">
+        <div className="max-w-3xl mx-auto">
+
+          {speechSupported ? (
+            /* ── Voice UI ── */
+            <div className="flex flex-col items-center gap-4">
+
+              {/* Live transcript display */}
+              <div className="w-full min-h-[56px] bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm">
+                {transcript || finalText ? (
+                  <span className="text-white leading-relaxed">{transcript || finalText}</span>
+                ) : (
+                  <span className="text-slate-500 italic">
+                    {voiceState === "recording" ? "Listening…" : thinking ? "Processing your answer…" : "Tap the mic to speak your answer"}
+                  </span>
+                )}
+              </div>
+
+              {/* Controls row */}
+              <div className="flex items-center gap-5">
+                {/* Large mic / stop button */}
+                <button
+                  onClick={voiceState === "recording" ? stopRecording : startRecording}
+                  disabled={thinking || ending}
+                  className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                    voiceState === "recording"
+                      ? "bg-red-500 hover:bg-red-400 shadow-red-500/40"
+                      : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30"
+                  }`}
+                >
+                  {/* Pulse rings when recording */}
+                  {voiceState === "recording" && (
+                    <>
+                      <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-25" />
+                      <span className="absolute inset-[-6px] rounded-full border-2 border-red-400/30 animate-pulse" />
+                    </>
+                  )}
+                  {voiceState === "recording"
+                    ? <Square className="w-6 h-6 text-white fill-white" />
+                    : <Mic className="w-7 h-7 text-white" />}
+                </button>
+
+                {/* Send / Re-record — shown once there's something to send */}
+                {hasTranscript && voiceState !== "recording" && (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={sendAnswer}
+                      disabled={thinking || ending || !finalText.trim()}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {thinking
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                        : <><Send className="w-4 h-4" /> Send Answer</>}
+                    </button>
+                    <button
+                      onClick={() => { setFinalText(""); setTranscript(""); finalTextRef.current = ""; setSpeechError(""); }}
+                      className="flex items-center gap-2 px-5 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-sm transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Re-record
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* State hint */}
+              <p className="text-slate-600 text-xs">
+                {voiceState === "recording"
+                  ? "Recording — tap the button to stop"
+                  : finalText
+                  ? "Review your answer above, then send or re-record"
+                  : "Tap the mic to speak. Your answer will appear above."}
+              </p>
+
+              {speechError && (
+                <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 w-full">
+                  <MicOff className="w-4 h-4 flex-shrink-0" /> {speechError}
+                </div>
+              )}
+            </div>
+
+          ) : (
+            /* ── Fallback text input (Firefox / unsupported) ── */
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                Voice input is not supported in this browser. Type your answer below.
+              </div>
+              <div className="flex gap-3">
+                <textarea
+                  value={fallbackText}
+                  onChange={(e) => setFallbackText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAnswer(); }
+                  }}
+                  disabled={thinking || ending}
+                  placeholder="Type your answer… (Enter to send, Shift+Enter for new line)"
+                  rows={3}
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                />
+                <button
+                  onClick={sendAnswer}
+                  disabled={!fallbackText.trim() || thinking || ending}
+                  className="flex-shrink-0 w-12 h-12 self-end rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {thinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-center text-slate-600 text-xs mt-2">Your answers are private and only used to generate follow-up questions.</p>
+
+        <p className="text-center text-slate-600 text-xs mt-3">Your answers are private and only used to generate follow-up questions.</p>
       </div>
     </div>
   );

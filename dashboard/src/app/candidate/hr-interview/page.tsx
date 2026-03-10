@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, Play, X, Loader2, Trophy, Clock, MessageSquare } from "lucide-react";
+import { Mic, Play, X, Loader2, Trophy, Clock, MessageSquare, Upload, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 
 type HRSession = {
   id: string;
@@ -20,6 +20,10 @@ export default function HRInterviewListPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [resumeText, setResumeText] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [filePreview, setFilePreview] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState("");
 
@@ -31,8 +35,67 @@ export default function HRInterviewListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function handleFileUpload(file: File) {
+    setParseError("");
+    setParsing(true);
+    setFileName(file.name);
+    setResumeText("");
+    setFilePreview("");
+
+    try {
+      let text = "";
+
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pages: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          pages.push(
+            content.items
+              .map((item: unknown) => (item as { str?: string }).str ?? "")
+              .join(" ")
+          );
+        }
+        text = pages.join("\n\n");
+      } else if (
+        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.name.endsWith(".docx")
+      ) {
+        const mammoth = await import("mammoth");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        text = result.value;
+      } else {
+        throw new Error("Unsupported file type. Please upload a PDF or DOCX.");
+      }
+
+      const cleaned = text.replace(/\s+/g, " ").trim();
+      if (!cleaned) throw new Error("File appears to be empty or could not be read.");
+
+      setResumeText(cleaned);
+      setFilePreview(cleaned.slice(0, 220));
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Failed to read file");
+      setFileName("");
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  function resetFile() {
+    setFileName("");
+    setResumeText("");
+    setFilePreview("");
+    setParseError("");
+  }
+
   async function handleStart() {
-    if (!resumeText.trim()) { setStartError("Please paste your resume first."); return; }
+    if (!resumeText.trim()) { setStartError("Please upload your resume first."); return; }
     setStarting(true);
     setStartError("");
     try {
@@ -70,7 +133,7 @@ export default function HRInterviewListPage() {
             <h1 className="text-2xl font-bold text-white">HR Round Interview</h1>
           </div>
           <p className="text-slate-400 text-sm ml-12">
-            AI-driven conversational interviews. Up to 20 questions, 15 minutes. Powered by your resume.
+            AI voice interview. Up to 20 questions, 15 minutes. Powered by your resume.
           </p>
         </div>
         <button
@@ -90,11 +153,8 @@ export default function HRInterviewListPage() {
         <div className="text-center py-20 border border-dashed border-slate-700 rounded-2xl">
           <Mic className="w-12 h-12 text-slate-700 mx-auto mb-3" />
           <div className="text-slate-400 font-medium mb-1">No HR interviews yet</div>
-          <p className="text-slate-600 text-sm mb-4">Start your first AI-powered HR interview practice session</p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="text-indigo-400 text-sm hover:underline"
-          >
+          <p className="text-slate-600 text-sm mb-4">Start your first AI-powered voice HR interview</p>
+          <button onClick={() => setShowModal(true)} className="text-indigo-400 text-sm hover:underline">
             Start your first session →
           </button>
         </div>
@@ -165,37 +225,83 @@ export default function HRInterviewListPage() {
                 <Mic className="w-4 h-4 text-indigo-400" />
                 <h2 className="text-white font-semibold">Start HR Interview</h2>
               </div>
-              <button onClick={() => { setShowModal(false); setStartError(""); }} className="text-slate-500 hover:text-white transition-colors">
+              <button
+                onClick={() => { setShowModal(false); setStartError(""); resetFile(); }}
+                className="text-slate-500 hover:text-white transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-5">
               <p className="text-slate-400 text-sm mb-4">
-                Paste your resume below. The AI interviewer will use it to ask personalised, relevant questions.
+                Upload your resume (PDF or DOCX). The AI will use it to ask personalised voice questions.
               </p>
 
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Your Resume <span className="text-red-400">*</span>
+                Resume <span className="text-red-400">*</span>
               </label>
-              <textarea
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-                rows={8}
-                placeholder={`Paste your full resume text here...
 
-Example:
-John Smith | john@email.com | LinkedIn: ...
-Summary: 4 years QA automation engineer...
-Experience:
-  - Senior QA Engineer at Acme Corp (2022–present)
-    • Built Playwright framework from scratch...`}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              {!fileName ? (
+                <label
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-indigo-500 transition-colors bg-slate-800/50"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                  />
+                  {parsing ? (
+                    <>
+                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin mb-2" />
+                      <span className="text-slate-400 text-sm">Reading resume…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-slate-500 mb-2" />
+                      <span className="text-slate-400 text-sm">Drop PDF or DOCX here, or click to browse</span>
+                      <span className="text-slate-600 text-xs mt-1">Supports .pdf and .docx</span>
+                    </>
+                  )}
+                </label>
+              ) : (
+                <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-400" />
+                      <span className="text-white text-sm font-medium truncate max-w-[260px]">{fileName}</span>
+                    </div>
+                    <button onClick={resetFile} className="text-slate-500 hover:text-red-400 transition-colors" title="Remove file">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">{filePreview}…</p>
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 text-xs">Resume extracted successfully</span>
+                  </div>
+                </div>
+              )}
+
+              {parseError && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" /> {parseError}
+                </div>
+              )}
 
               <div className="mt-3 flex items-start gap-2 text-xs text-slate-500 bg-slate-800/50 rounded-lg px-3 py-2.5">
-                <span>💡</span>
-                <span>The AI will ask up to 20 follow-up questions over ~15 minutes. It adapts based on your answers.</span>
+                <Mic className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-indigo-500" />
+                <span>This is a <strong className="text-slate-400">voice interview</strong>. The AI will speak questions aloud and listen to your spoken answers. Make sure your microphone is ready.</span>
               </div>
 
               {startError && (
@@ -207,17 +313,19 @@ Experience:
 
             <div className="flex gap-3 p-5 pt-0">
               <button
-                onClick={() => { setShowModal(false); setStartError(""); }}
+                onClick={() => { setShowModal(false); setStartError(""); resetFile(); }}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-sm transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStart}
-                disabled={starting || !resumeText.trim()}
+                disabled={starting || !resumeText.trim() || parsing}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {starting ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting…</> : <><Play className="w-4 h-4" /> Begin Interview</>}
+                {starting
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Starting…</>
+                  : <><Play className="w-4 h-4" /> Begin Interview</>}
               </button>
             </div>
           </div>
