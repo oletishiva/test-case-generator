@@ -317,6 +317,9 @@ export default function MarketingPage() {
             <Link href="/sign-in" className="hidden text-sm text-gray-500 hover:text-gray-900 transition-colors sm:block">
               Login
             </Link>
+            <Link href="/sign-up" className="hidden text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors sm:block">
+              Sign Up
+            </Link>
             <Link href="/sign-up">
               <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-sm px-4">
                 Get Started Free
@@ -359,6 +362,7 @@ export default function MarketingPage() {
                   <Link href="/blog" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Blog</Link>
                   <Link href="#pricing" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Pricing</Link>
                   <Link href="/sign-in" className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setMobileOpen(false)}>Login</Link>
+                  <Link href="/sign-up" className="block rounded-lg px-3 py-2.5 text-sm font-medium text-violet-600 hover:bg-violet-50" onClick={() => setMobileOpen(false)}>Sign Up Free</Link>
                 </div>
               </div>
             </motion.div>
