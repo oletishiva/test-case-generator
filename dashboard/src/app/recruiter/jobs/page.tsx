@@ -82,8 +82,8 @@ export default function RecruiterJobsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Job Postings</h1>
           <p className="text-slate-400 text-sm mt-1">Post QA roles and link them to assessments.</p>
@@ -203,7 +203,7 @@ export default function RecruiterJobsPage() {
             <div key={j.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="text-white font-medium text-sm">{j.title}</span>
                     <span className={`text-xs rounded-full px-2 py-0.5 border capitalize ${STATUS_COLORS[j.status]}`}>{j.status}</span>
                     <span className="text-xs text-slate-500 capitalize bg-slate-800 rounded-full px-2 py-0.5">{j.experience_level}</span>

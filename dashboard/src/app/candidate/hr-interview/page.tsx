@@ -122,9 +122,9 @@ export default function HRInterviewListPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
@@ -161,22 +161,24 @@ export default function HRInterviewListPage() {
       ) : (
         <div className="space-y-3">
           {sessions.map((s) => (
-            <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                <Mic className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-white font-medium text-sm">HR Round Interview</div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-slate-500 text-xs">
-                    {new Date(s.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </span>
-                  <span className="text-slate-600 text-xs flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" /> {s.question_count} questions
-                  </span>
+            <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:contents">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                  <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+                </div>
+                <div className="flex-1 min-w-0 sm:flex-1">
+                  <div className="text-white font-medium text-sm">HR Round Interview</div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                    <span className="text-slate-500 text-xs">
+                      {new Date(s.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                    <span className="text-slate-600 text-xs flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" /> {s.question_count} questions
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                 {s.status === "completed" ? (
                   <>
                     {s.score != null && (

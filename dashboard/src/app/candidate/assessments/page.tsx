@@ -47,7 +47,7 @@ export default function CandidateAssessmentsPage() {
   );
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Assessments</h1>
         <p className="text-slate-400 text-sm mt-1">Company assessments you've been invited to complete.</p>
@@ -114,7 +114,7 @@ function AssessmentCard({ a }: { a: Assessment }) {
         {a.assessment.description && (
           <div className="text-slate-400 text-xs mt-1.5 line-clamp-2">{a.assessment.description}</div>
         )}
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <Clock className="w-3 h-3" /> {a.assessment.time_limit_minutes} min
           </div>

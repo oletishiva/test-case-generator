@@ -103,26 +103,26 @@ export default function AssessmentResultsPage() {
   const highRisk = results.filter((r) => riskLevel(r).label === "High Risk").length;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
       <Link href="/recruiter/assessments" className="flex items-center gap-1 text-slate-400 hover:text-white text-sm mb-6 transition-colors">
         <ChevronLeft className="w-4 h-4" /> Back to Assessments
       </Link>
 
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{meta?.title}</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{meta?.title}</h1>
           <p className="text-slate-400 text-sm mt-1">Passing score: {meta?.passing_score}%</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/recruiter/assessments/${id}/invite`}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
           >
             <Users className="w-4 h-4" /> Invite More
           </Link>
           <Link
             href={`/recruiter/assessments/${id}/invite?type=hr`}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
             title="Send HR Round Interview invite to a candidate"
           >
             <Mic className="w-4 h-4" /> HR Invite
@@ -131,7 +131,7 @@ export default function AssessmentResultsPage() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {[
           { label: "Total Invited", value: results.length, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10" },
           { label: "Completed", value: completed.length, icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -176,7 +176,7 @@ export default function AssessmentResultsPage() {
                       <div className="text-white font-medium text-sm">{r.candidate.full_name}</div>
                       <div className="text-slate-500 text-xs">{r.candidate.email}</div>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
                       {/* Risk badge */}
                       {r.status === "completed" && (
                         <span className={`text-xs rounded-full px-2 py-0.5 border flex items-center gap-1.5 ${risk.color}`}>

@@ -340,30 +340,30 @@ export default function HRInterviewSessionPage() {
   return (
     <div className="flex flex-col h-screen bg-slate-950">
       {/* Top bar */}
-      <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+      <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
             <Mic className="w-4 h-4 text-indigo-400" />
           </div>
-          <div>
-            <div className="text-white font-medium text-sm">HR Round Interview</div>
-            <div className="text-slate-500 text-xs flex items-center gap-2">
-              <MessageSquare className="w-3 h-3" />
+          <div className="min-w-0">
+            <div className="text-white font-medium text-sm truncate">HR Round Interview</div>
+            <div className="text-slate-500 text-xs flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 flex-shrink-0" />
               <span>Q {questionCount}/20</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className={`flex items-center gap-1.5 font-mono font-bold text-sm ${timerColor}`}>
-            <Clock className="w-4 h-4" /> {timerDisplay}
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div className={`flex items-center gap-1 sm:gap-1.5 font-mono font-bold text-sm ${timerColor}`}>
+            <Clock className="w-4 h-4 flex-shrink-0" /> {timerDisplay}
           </div>
           <button
             onClick={endInterview}
             disabled={ending}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 text-xs transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 text-xs transition-colors disabled:opacity-50"
           >
             {ending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
-            End Interview
+            <span className="hidden sm:inline">End Interview</span>
           </button>
         </div>
       </div>

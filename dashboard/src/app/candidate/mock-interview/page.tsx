@@ -70,8 +70,8 @@ export default function MockInterviewListPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Mock Interviews</h1>
           <p className="text-slate-400 text-sm mt-1">Practice with AI-generated QA interview questions and get instant feedback.</p>
@@ -92,7 +92,7 @@ export default function MockInterviewListPage() {
 
             <div className="mb-5">
               <label className="text-sm font-medium text-slate-300 mb-3 block">Topic</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {TOPICS.map((t) => (
                   <button
                     key={t.value}
@@ -171,19 +171,21 @@ export default function MockInterviewListPage() {
           {sessions.map((s) => (
             <div
               key={s.id}
-              className="flex items-center gap-4 bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 hover:border-slate-700 transition-colors"
+              className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-slate-900 border border-slate-800 rounded-xl px-4 sm:px-5 py-4 hover:border-slate-700 transition-colors"
             >
-              <div className="text-xl">{TOPICS.find((t) => t.value === s.topic)?.emoji ?? "🧪"}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-white font-medium text-sm capitalize">
-                  {TOPICS.find((t) => t.value === s.topic)?.label ?? s.topic} — {s.difficulty}
-                </div>
-                <div className="text-slate-500 text-xs mt-0.5">
-                  {new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              <div className="flex items-center gap-3 sm:contents">
+                <div className="text-xl flex-shrink-0">{TOPICS.find((t) => t.value === s.topic)?.emoji ?? "🧪"}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium text-sm capitalize">
+                    {TOPICS.find((t) => t.value === s.topic)?.label ?? s.topic} — {s.difficulty}
+                  </div>
+                  <div className="text-slate-500 text-xs mt-0.5">
+                    {new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </div>
                 </div>
               </div>
               {s.completed ? (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                   {s.score != null && (
                     <div className="flex items-center gap-1 text-amber-400 text-sm font-medium">
                       <Trophy className="w-4 h-4" /> {Math.round(s.score)}%
@@ -200,7 +202,7 @@ export default function MockInterviewListPage() {
                   </a>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                   <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2 py-0.5 flex items-center gap-1">
                     <Clock className="w-3 h-3" /> In progress
                   </span>

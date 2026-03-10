@@ -45,7 +45,7 @@ export default function InviteCandidatePage() {
   }
 
   return (
-    <div className="p-8 max-w-xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-xl mx-auto">
       <Link href={`/recruiter/assessments/${id}/results`} className="flex items-center gap-1 text-slate-400 hover:text-white text-sm mb-6 transition-colors">
         <ChevronLeft className="w-4 h-4" /> Back to Results
       </Link>
@@ -70,19 +70,19 @@ export default function InviteCandidatePage() {
       <div className="flex gap-2 mb-6">
         <Link
           href={`/recruiter/assessments/${id}/invite`}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors border ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors border ${
             !isHR ? "bg-blue-600 text-white border-blue-600" : "border-slate-700 text-slate-400 hover:text-white"
           }`}
         >
-          <Users className="w-3.5 h-3.5" /> Assessment Invite
+          <Users className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">Assessment Invite</span>
         </Link>
         <Link
           href={`/recruiter/assessments/${id}/invite?type=hr`}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors border ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors border ${
             isHR ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-700 text-slate-400 hover:text-white"
           }`}
         >
-          <Mic className="w-3.5 h-3.5" /> HR Interview Invite
+          <Mic className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">HR Interview Invite</span>
         </Link>
       </div>
 
@@ -135,7 +135,7 @@ export default function InviteCandidatePage() {
           <div className="space-y-2">
             {invited.map((e) => (
               <div key={e} className="flex items-center gap-2 text-sm text-slate-300 bg-slate-800 rounded-lg px-3 py-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> {e}
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> <span className="truncate">{e}</span>
               </div>
             ))}
           </div>
