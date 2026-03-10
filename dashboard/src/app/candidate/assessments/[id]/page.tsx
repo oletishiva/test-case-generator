@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Clock, Send, ChevronLeft, ChevronRight,
-  AlertCircle, Loader2, CheckCircle2, Building2,
+  AlertCircle, Loader2, CheckCircle2, Building2, ShieldAlert,
 } from "lucide-react";
+
+const FaceProctor = dynamic(() => import("@/components/FaceProctor"), { ssr: false });
 
 type Question = {
   id: string;
@@ -49,7 +52,6 @@ export default function CandidateAssessmentSessionPage() {
   const router = useRouter();
 
   const [assessment, setAssessment] = useState<AssessmentData | null>(null);
-  const [inviteId, setInviteId] = useState("");
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -59,10 +61,69 @@ export default function CandidateAssessmentSessionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Anti-cheat
+  const [warningMessage, setWarningMessage] = useState("");
+  const flagCooldowns = useRef<Record<string, number>>({});
+
   const autoSubmittedRef = useRef(false);
   const secondsLeft = useCountdown(startedAt, assessment?.time_limit_minutes ?? 60);
 
-  // Auto-submit when timer hits 0
+  // ── Flag sender (5s cooldown per type) ──────────────────────────────────
+  const sendFlag = useCallback(async (flagType: string, detail?: string) => {
+    const now = Date.now();
+    if (flagCooldowns.current[flagType] && now - flagCooldowns.current[flagType] < 5000) return;
+    flagCooldowns.current[flagType] = now;
+    try {
+      await fetch("/api/candidate/assessment/flag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId, flagType, detail }),
+      });
+    } catch { /* non-fatal */ }
+  }, [assessmentId]);
+
+  const showWarning = useCallback((msg: string) => {
+    setWarningMessage(msg);
+    setTimeout(() => setWarningMessage(""), 6000);
+  }, []);
+
+  // ── Anti-cheat: fullscreen + tab + copy detection ────────────────────────
+  useEffect(() => {
+    if (!assessment) return;
+
+    document.documentElement.requestFullscreen?.().catch(() => {});
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        sendFlag("tab_switch");
+        showWarning("Tab switch detected. This incident has been reported.");
+      }
+    };
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        sendFlag("fullscreen_exit");
+        showWarning("Fullscreen exited. Please stay in fullscreen during the assessment.");
+        setTimeout(() => document.documentElement.requestFullscreen?.().catch(() => {}), 1000);
+      }
+    };
+    const onCopy = () => {
+      sendFlag("copy");
+      showWarning("Copying content has been flagged and reported.");
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("copy", onCopy);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("copy", onCopy);
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    };
+  }, [assessment, sendFlag, showWarning]);
+
+  // ── Auto-submit when timer hits 0 ───────────────────────────────────────
   useEffect(() => {
     if (secondsLeft === 0 && !autoSubmittedRef.current && assessment) {
       autoSubmittedRef.current = true;
@@ -77,7 +138,6 @@ export default function CandidateAssessmentSessionPage() {
       .then((d) => {
         if (d.error) { setLoadError(d.error); return; }
         setAssessment(d.assessment);
-        setInviteId(d.invite.id);
         setStartedAt(d.invite.started_at ?? new Date().toISOString());
         setAnswers(d.invite.savedAnswers ?? {});
       })
@@ -129,7 +189,6 @@ export default function CandidateAssessmentSessionPage() {
   const totalAnswered = assessment.questions.filter((qq) => answers[qq.id] !== undefined && answers[qq.id] !== "").length;
   const progress = (totalAnswered / assessment.questions.length) * 100;
 
-  // Timer formatting
   const timerColor = secondsLeft != null && secondsLeft < 300 ? "text-red-400" : "text-emerald-400";
   const timerDisplay = secondsLeft != null
     ? `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`
@@ -137,6 +196,15 @@ export default function CandidateAssessmentSessionPage() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Anti-cheat warning banner */}
+      {warningMessage && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-slate-900 px-4 py-3 flex items-center justify-center gap-2 text-sm font-semibold shadow-lg">
+          <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+          {warningMessage}
+          <button onClick={() => setWarningMessage("")} className="ml-2 text-slate-700 hover:text-slate-900 font-normal">✕</button>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
         <div className="min-w-0">
@@ -178,13 +246,16 @@ export default function CandidateAssessmentSessionPage() {
           ))}
         </div>
 
-        {/* Question card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-4">
+        {/* Question card — right-click disabled, text not selectable */}
+        <div
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-4"
+          onContextMenu={(e) => e.preventDefault()}
+        >
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs text-blue-400 font-medium">Question {currentIdx + 1} of {assessment.questions.length}</span>
             <span className="text-xs bg-slate-800 text-slate-400 rounded-full px-2 py-0.5 uppercase">{q.type} · {q.points}pts</span>
           </div>
-          <p className="text-white text-base leading-relaxed mb-5">{q.question}</p>
+          <p className="text-white text-base leading-relaxed mb-5 select-none">{q.question}</p>
 
           {/* MCQ */}
           {q.type === "mcq" && q.options && (
@@ -211,6 +282,7 @@ export default function CandidateAssessmentSessionPage() {
             <textarea
               value={answers[q.id] ?? ""}
               onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+              onPaste={() => { sendFlag("paste"); showWarning("Paste detected. This incident has been logged."); }}
               placeholder="Type your answer here…"
               rows={5}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -222,6 +294,7 @@ export default function CandidateAssessmentSessionPage() {
             <textarea
               value={answers[q.id] ?? ""}
               onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+              onPaste={() => { sendFlag("paste"); showWarning("Paste detected. This incident has been logged."); }}
               placeholder="// Write your code here…"
               rows={8}
               spellCheck={false}
@@ -263,7 +336,6 @@ export default function CandidateAssessmentSessionPage() {
             </button>
           )}
 
-          {/* Early submit on any question */}
           {currentIdx < assessment.questions.length - 1 && totalAnswered === assessment.questions.length && (
             <button
               onClick={() => submitAnswers(false)}
@@ -276,6 +348,20 @@ export default function CandidateAssessmentSessionPage() {
           )}
         </div>
       </div>
+
+      {/* Face proctoring widget — fixed bottom-right */}
+      <FaceProctor
+        onViolation={(type, detail) => {
+          sendFlag(type, detail);
+          if (detail !== "looking_away") {
+            showWarning(
+              detail === "no_face"
+                ? "No face detected. Please ensure your face is visible to the camera."
+                : "Multiple faces detected. Only you should be in view."
+            );
+          }
+        }}
+      />
     </div>
   );
 }

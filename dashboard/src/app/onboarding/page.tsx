@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   User,
@@ -16,6 +16,13 @@ type Role = "candidate" | "recruiter";
 
 export default function OnboardingPage() {
   const { user } = useUser();
+
+  // If user already completed onboarding, redirect them straight to their dashboard
+  useEffect(() => {
+    const existingRole = user?.publicMetadata?.role as string | undefined;
+    if (existingRole === "recruiter") window.location.href = "/recruiter/dashboard";
+    else if (existingRole === "candidate") window.location.href = "/candidate/dashboard";
+  }, [user]);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role | null>(null);

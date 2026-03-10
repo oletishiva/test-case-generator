@@ -9,13 +9,15 @@ import {
   ClipboardList,
   User,
   Zap,
+  Mic,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/candidate/dashboard",    label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/candidate/dashboard",     label: "Dashboard",        icon: LayoutDashboard },
   { href: "/candidate/mock-interview", label: "Mock Interviews", icon: MessageSquare },
-  { href: "/candidate/assessments",  label: "Assessments",      icon: ClipboardList },
-  { href: "/candidate/profile",      label: "My Profile",       icon: User },
+  { href: "/candidate/hr-interview",  label: "HR Interview",     icon: Mic },
+  { href: "/candidate/assessments",   label: "Assessments",      icon: ClipboardList },
+  { href: "/candidate/profile",       label: "My Profile",       icon: User },
 ];
 
 export default function CandidateLayout({ children }: { children: React.ReactNode }) {

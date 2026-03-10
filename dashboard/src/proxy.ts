@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
@@ -13,21 +14,40 @@ const isProtectedRoute = createRouteMatcher([
 const isCandidateRoute = createRouteMatcher(["/candidate(.*)"]);
 const isRecruiterRoute = createRouteMatcher(["/recruiter(.*)"]);
 
+async function getRoleFromDb(userId: string): Promise<string | undefined> {
+  try {
+    const db = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SECRET_KEY!
+    );
+    const { data } = await db
+      .from("profiles")
+      .select("role")
+      .eq("clerk_user_id", userId)
+      .single();
+    return data?.role ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default clerkMiddleware(async (auth, req) => {
   if (!isProtectedRoute(req)) return;
 
   const { userId, sessionClaims } = await auth.protect();
 
-  // Not signed in — auth.protect() already redirects to sign-in, so we only
-  // reach here if the user IS authenticated.
-
-  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
+  let role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
   const pathname = req.nextUrl.pathname;
 
   // Skip redirect loop: user is already on /onboarding
   if (pathname.startsWith("/onboarding")) return;
 
-  // If role is not set yet, send to onboarding
+  // JWT might be stale right after onboarding — fall back to DB check
+  if (!role && userId && (isCandidateRoute(req) || isRecruiterRoute(req))) {
+    role = await getRoleFromDb(userId);
+  }
+
+  // If role still not set, send to onboarding
   if (!role) {
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }

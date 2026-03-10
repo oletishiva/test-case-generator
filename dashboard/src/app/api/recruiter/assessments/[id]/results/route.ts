@@ -32,7 +32,7 @@ export async function GET(
     // Fetch all candidate results
     const { data: results, error } = await db
       .from("candidate_assessments")
-      .select("id, candidate_clerk_id, status, score, ai_feedback, invited_at, started_at, completed_at")
+      .select("id, candidate_clerk_id, status, score, ai_feedback, invited_at, started_at, completed_at, tab_switches, copy_attempts, paste_events, fullscreen_exits, proctoring_flags")
       .eq("assessment_id", assessmentId)
       .order("completed_at", { ascending: false });
 
