@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import {
   User,
@@ -17,7 +16,6 @@ type Role = "candidate" | "recruiter";
 
 export default function OnboardingPage() {
   const { user } = useUser();
-  const router = useRouter();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role | null>(null);
@@ -60,9 +58,10 @@ export default function OnboardingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Setup failed");
 
-      // Reload user to pick up updated publicMetadata, then redirect
-      await user?.reload();
-      router.push(role === "candidate" ? "/candidate/dashboard" : "/recruiter/dashboard");
+      // Hard redirect so Clerk issues a fresh session token with the new role in JWT claims.
+      // router.push() (client navigation) would use the stale token and proxy.ts would
+      // redirect back to /onboarding again.
+      window.location.href = role === "candidate" ? "/candidate/dashboard" : "/recruiter/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
