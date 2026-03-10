@@ -19,14 +19,35 @@ function useCountdown(startedAt: string | null, limitMinutes = 15) {
   return secondsLeft;
 }
 
+// Minimal interface for cross-browser SpeechRecognition
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((e: SpeechRecognitionEvent) => void) | null;
+  onerror: ((e: { error: string }) => void) | null;
+  onend: (() => void) | null;
+}
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  [index: number]: { transcript: string };
+}
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: { length: number; [index: number]: SpeechRecognitionResult };
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
 // Detect browser speech support
-const getSpeechRecognition = () => {
+const getSpeechRecognition = (): SpeechRecognitionCtor | null => {
   if (typeof window === "undefined") return null;
-  return (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
-    .SpeechRecognition as (new () => SpeechRecognition) | undefined
-    ?? (window as unknown as { webkitSpeechRecognition?: unknown })
-      .webkitSpeechRecognition as (new () => SpeechRecognition) | undefined
-    ?? null;
+  const w = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 };
 
 function speakText(text: string) {
@@ -73,7 +94,7 @@ export default function HRInterviewSessionPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoEndedRef = useRef(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalTextRef = useRef(""); // keep ref in sync for use in recognition callbacks
   const prevMsgLenRef = useRef(0);
 
@@ -165,7 +186,7 @@ export default function HRInterviewSessionPage() {
       setTranscript(finalTextRef.current + interim);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: { error: string }) => {
       if (event.error === "not-allowed") {
         setSpeechError("Microphone access denied. Please allow microphone access in your browser settings.");
       } else if (event.error === "no-speech") {
