@@ -92,11 +92,17 @@ export default function HRInterviewSessionPage() {
   // Fallback text (for non-speech browsers)
   const [fallbackText, setFallbackText] = useState("");
 
+  // Grace period state (when timer hits 0 while an answer is in-progress)
+  const [timedOut, setTimedOut] = useState(false);
+  const [graceSecondsLeft, setGraceSecondsLeft] = useState<number | null>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoEndedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalTextRef = useRef(""); // keep ref in sync for use in recognition callbacks
+  const fallbackTextRef = useRef(""); // mirror of fallbackText for use in effects
   const prevMsgLenRef = useRef(0);
+  const graceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const secondsLeft = useCountdown(startedAt, 15);
 
@@ -131,10 +137,11 @@ export default function HRInterviewSessionPage() {
     if (lastAI) speakText(lastAI.content);
   }, [messages]);
 
-  // Cancel speech on unmount
+  // Cancel speech and grace timer on unmount
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined") window.speechSynthesis.cancel();
+      if (graceTimerRef.current) clearInterval(graceTimerRef.current);
     };
   }, []);
 
@@ -143,14 +150,53 @@ export default function HRInterviewSessionPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
 
-  // Auto-end when timer hits 0
+  // When timer hits 0: if there's a pending answer give a 2-min grace period, otherwise end now
   useEffect(() => {
-    if (secondsLeft === 0 && !autoEndedRef.current && status === "in_progress") {
-      autoEndedRef.current = true;
+    if (secondsLeft !== 0 || autoEndedRef.current || status !== "in_progress") return;
+    autoEndedRef.current = true;
+
+    const hasPending = voiceState === "recording"
+      || !!finalTextRef.current.trim()
+      || !!fallbackTextRef.current.trim();
+
+    if (!hasPending) {
+      endInterview();
+      return;
+    }
+
+    // Stop microphone if recording so candidate can review transcript
+    if (voiceState === "recording") {
+      recognitionRef.current?.stop();
+      setVoiceState("idle");
+    }
+
+    setTimedOut(true);
+    setGraceSecondsLeft(120);
+
+    graceTimerRef.current = setInterval(() => {
+      setGraceSecondsLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(graceTimerRef.current!);
+          graceTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft]);
+
+  // Grace period expired — auto-submit pending answer then end
+  useEffect(() => {
+    if (graceSecondsLeft !== 0) return;
+    const pendingText = finalTextRef.current.trim() || fallbackTextRef.current.trim();
+    if (pendingText && !thinking && !ending) {
+      sendAnswer(); // sendAnswer checks timedOut and will end after submitting
+    } else {
       endInterview();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft]);
+  }, [graceSecondsLeft]);
 
   function startRecording() {
     const SpeechRecognition = getSpeechRecognition();
@@ -213,14 +259,17 @@ export default function HRInterviewSessionPage() {
   }
 
   const sendAnswer = useCallback(async () => {
-    const text = speechSupported ? finalTextRef.current.trim() : fallbackText.trim();
+    const text = speechSupported ? finalTextRef.current.trim() : fallbackTextRef.current.trim();
     if (!text || thinking || ending) return;
 
     if (typeof window !== "undefined") window.speechSynthesis.cancel();
+    // Clear grace timer — answer is being submitted
+    if (graceTimerRef.current) { clearInterval(graceTimerRef.current); graceTimerRef.current = null; }
     setFinalText("");
     setTranscript("");
     finalTextRef.current = "";
     setFallbackText("");
+    fallbackTextRef.current = "";
     setSpeechError("");
 
     const candidateMsg: Message = { role: "candidate", content: text, timestamp: new Date().toISOString() };
@@ -236,7 +285,8 @@ export default function HRInterviewSessionPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
 
-      if (data.done) {
+      // If timed out, always end after submitting the last answer (don't continue)
+      if (data.done || timedOut) {
         setThinking(false);
         await endInterview();
       } else {
@@ -250,7 +300,7 @@ export default function HRInterviewSessionPage() {
       setThinking(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, thinking, ending, speechSupported, fallbackText]);
+  }, [id, thinking, ending, speechSupported, timedOut]);
 
   async function endInterview() {
     if (ending) return;
@@ -351,6 +401,19 @@ export default function HRInterviewSessionPage() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Grace period banner */}
+      {timedOut && graceSecondsLeft !== null && graceSecondsLeft > 0 && !ending && (
+        <div className="flex-shrink-0 bg-amber-500/10 border-t border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-amber-400 text-sm">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>Time&apos;s up! Finish your answer and submit — auto-submitting in</span>
+          </div>
+          <span className="font-mono font-bold text-amber-400 text-sm flex-shrink-0">
+            {String(Math.floor(graceSecondsLeft / 60)).padStart(2, "0")}:{String(graceSecondsLeft % 60).padStart(2, "0")}
+          </span>
+        </div>
+      )}
+
       {/* Input area */}
       <div className="flex-shrink-0 bg-slate-900 border-t border-slate-800 px-4 py-5">
         <div className="max-w-3xl mx-auto">
@@ -442,7 +505,7 @@ export default function HRInterviewSessionPage() {
               <div className="flex gap-3">
                 <textarea
                   value={fallbackText}
-                  onChange={(e) => setFallbackText(e.target.value)}
+                  onChange={(e) => { setFallbackText(e.target.value); fallbackTextRef.current = e.target.value; }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAnswer(); }
                   }}
