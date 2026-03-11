@@ -305,29 +305,34 @@ export default function CandidateDashboardPage() {
         {TOOL_FEATURES.map((f) => <FeatureCard key={f.href} f={f} />)}
       </div>
 
-      {/* ── Job Board (coming soon) ───────────────────────────── */}
+      {/* ── Job Board ────────────────────────────────────────────── */}
       <SectionHeader icon={Briefcase} label="Job Board" color="text-emerald-400" />
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-900/20 via-slate-900 to-teal-900/10 p-6 mb-10">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative flex flex-wrap items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-            <Briefcase className="w-6 h-6 text-emerald-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-white font-bold text-sm">QA Job Board</span>
-              <span className="text-xs bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-medium">Coming Soon</span>
+      <Link href="/candidate/jobs" className="block mb-10 group">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-900/20 via-slate-900 to-teal-900/10 p-6 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+          <div className="relative flex flex-wrap items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <Briefcase className="w-6 h-6 text-emerald-400" />
             </div>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Browse live QA automation jobs from LinkedIn, Indeed & Glassdoor — aggregated in one place, filtered for your skill set.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 flex-shrink-0">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-            <span className="text-emerald-400">3,600+ open roles</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-white font-bold text-sm">QA Job Board</span>
+                <span className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5 font-medium">Live</span>
+              </div>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Browse live QA automation jobs from LinkedIn, Indeed & Glassdoor — aggregated in one place, filtered for your skill set.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex items-center gap-2 text-xs">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-400 font-medium">3,600+ open roles</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+            </div>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* ── Pro upgrade banner ───────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-900/40 via-slate-900 to-indigo-900/30 p-6 sm:p-8">

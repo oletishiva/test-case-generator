@@ -13,14 +13,16 @@ import {
   Mic,
   Menu,
   X,
+  Briefcase,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/candidate/dashboard",     label: "Dashboard",       icon: LayoutDashboard },
+  { href: "/candidate/dashboard",     label: "Dashboard",          icon: LayoutDashboard },
   { href: "/candidate/mock-interview", label: "Practice Assessment", icon: MessageSquare },
   { href: "/candidate/hr-interview",  label: "Technical Interview", icon: Mic },
-  { href: "/candidate/assessments",   label: "Assessments",     icon: ClipboardList },
-  { href: "/candidate/profile",       label: "My Profile",      icon: User },
+  { href: "/candidate/assessments",   label: "Assessments",        icon: ClipboardList },
+  { href: "/candidate/jobs",          label: "Job Board",          icon: Briefcase },
+  { href: "/candidate/profile",       label: "My Profile",         icon: User },
 ];
 
 export default function CandidateLayout({ children }: { children: React.ReactNode }) {
