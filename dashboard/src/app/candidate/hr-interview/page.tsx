@@ -130,7 +130,7 @@ export default function HRInterviewListPage() {
             <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
               <Mic className="w-5 h-5 text-indigo-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white">HR Round Interview</h1>
+            <h1 className="text-2xl font-bold text-white">Technical Interview</h1>
           </div>
           <p className="text-slate-400 text-sm ml-12">
             AI voice interview. Up to 20 questions, 15 minutes. Powered by your resume.
@@ -152,8 +152,8 @@ export default function HRInterviewListPage() {
       ) : sessions.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-slate-700 rounded-2xl">
           <Mic className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-          <div className="text-slate-400 font-medium mb-1">No HR interviews yet</div>
-          <p className="text-slate-600 text-sm mb-4">Start your first AI-powered voice HR interview</p>
+          <div className="text-slate-400 font-medium mb-1">No technical interviews yet</div>
+          <p className="text-slate-600 text-sm mb-4">Start your first AI-powered voice technical interview</p>
           <button onClick={() => setShowModal(true)} className="text-indigo-400 text-sm hover:underline">
             Start your first session →
           </button>
@@ -167,7 +167,7 @@ export default function HRInterviewListPage() {
                   <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
                 </div>
                 <div className="flex-1 min-w-0 sm:flex-1">
-                  <div className="text-white font-medium text-sm">HR Round Interview</div>
+                  <div className="text-white font-medium text-sm">Technical Interview</div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                     <span className="text-slate-500 text-xs">
                       {new Date(s.started_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -225,7 +225,7 @@ export default function HRInterviewListPage() {
             <div className="flex items-center justify-between p-5 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <Mic className="w-4 h-4 text-indigo-400" />
-                <h2 className="text-white font-semibold">Start HR Interview</h2>
+                <h2 className="text-white font-semibold">Start Technical Interview</h2>
               </div>
               <button
                 onClick={() => { setShowModal(false); setStartError(""); resetFile(); }}

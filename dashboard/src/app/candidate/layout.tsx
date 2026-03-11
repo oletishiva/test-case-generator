@@ -17,8 +17,8 @@ import {
 
 const NAV = [
   { href: "/candidate/dashboard",     label: "Dashboard",       icon: LayoutDashboard },
-  { href: "/candidate/mock-interview", label: "Mock Interviews", icon: MessageSquare },
-  { href: "/candidate/hr-interview",  label: "HR Interview",    icon: Mic },
+  { href: "/candidate/mock-interview", label: "Practice Assessment", icon: MessageSquare },
+  { href: "/candidate/hr-interview",  label: "Technical Interview", icon: Mic },
   { href: "/candidate/assessments",   label: "Assessments",     icon: ClipboardList },
   { href: "/candidate/profile",       label: "My Profile",      icon: User },
 ];

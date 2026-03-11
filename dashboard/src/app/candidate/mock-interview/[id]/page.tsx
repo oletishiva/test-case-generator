@@ -107,7 +107,7 @@ export default function MockInterviewSessionPage() {
             <div className="text-xs text-slate-500 uppercase tracking-wider mb-1 capitalize">
               {session.topic.replace("-", " ")} · {session.difficulty}
             </div>
-            <h1 className="text-white font-bold text-lg">Mock Interview</h1>
+            <h1 className="text-white font-bold text-lg">Practice Assessment</h1>
           </div>
           <div className="text-sm text-slate-400">
             {totalAnswered}/{questions.length} answered

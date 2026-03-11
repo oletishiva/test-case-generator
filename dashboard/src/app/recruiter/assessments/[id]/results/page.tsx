@@ -123,9 +123,9 @@ export default function AssessmentResultsPage() {
           <Link
             href={`/recruiter/assessments/${id}/invite?type=hr`}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-            title="Send HR Round Interview invite to a candidate"
+            title="Send Technical Interview invite to a candidate"
           >
-            <Mic className="w-4 h-4" /> HR Invite
+            <Mic className="w-4 h-4" /> Tech Interview
           </Link>
         </div>
       </div>

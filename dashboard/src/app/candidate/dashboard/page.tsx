@@ -43,7 +43,7 @@ export default function CandidateDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           {
-            label: "Mock Interviews",
+            label: "Practice Assessments",
             value: loading ? "…" : stats?.mockInterviewsCompleted ?? 0,
             sub: "completed",
             icon: MessageSquare,
@@ -92,7 +92,7 @@ export default function CandidateDashboardPage() {
           {
             href: "/candidate/mock-interview",
             icon: MessageSquare,
-            title: "Start Mock Interview",
+            title: "Start Practice Assessment",
             desc: "Pick a topic and get AI-generated questions with instant feedback.",
             color: "border-violet-500/30 hover:border-violet-500",
             iconBg: "bg-violet-500/20",

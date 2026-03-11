@@ -114,10 +114,10 @@ export default function OnboardingPage() {
                 </div>
                 <div className="text-white font-semibold text-lg mb-1">I&apos;m a Candidate</div>
                 <div className="text-slate-400 text-sm leading-relaxed">
-                  Practice mock interviews, take company assessments, build your QA resume.
+                  Practice assessments, take technical interviews, build your QA resume.
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {["Mock Interviews", "Assessments", "Resume Builder"].map((tag) => (
+                  {["Practice Assessment", "Technical Interview", "Resume Builder"].map((tag) => (
                     <span key={tag} className="text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-full px-2 py-0.5">
                       {tag}
                     </span>
@@ -278,7 +278,7 @@ export default function OnboardingPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {(role === "candidate"
-                  ? ["AI Mock Interviews", "Company Assessments", "QA Resume Builder", "Interview Prep Bank"]
+                  ? ["Practice Assessments", "Technical Interviews", "QA Resume Builder", "Interview Prep Bank"]
                   : ["Create Assessments", "Invite Candidates", "Review Scores & AI Feedback", "Post Job Openings"]
                 ).map((item) => (
                   <div key={item} className="flex items-center gap-2 text-sm text-slate-400">

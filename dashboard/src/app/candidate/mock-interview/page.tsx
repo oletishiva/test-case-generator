@@ -73,8 +73,8 @@ export default function MockInterviewListPage() {
     <div className="p-4 sm:p-8 max-w-4xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Mock Interviews</h1>
-          <p className="text-slate-400 text-sm mt-1">Practice with AI-generated QA interview questions and get instant feedback.</p>
+          <h1 className="text-2xl font-bold text-white">Practice Assessment</h1>
+          <p className="text-slate-400 text-sm mt-1">Practice with AI-generated QA questions and get instant feedback on your answers.</p>
         </div>
         <button
           onClick={() => setShowStart(true)}
@@ -163,7 +163,7 @@ export default function MockInterviewListPage() {
         <div className="text-center py-20">
           <MessageSquare className="w-12 h-12 text-slate-700 mx-auto mb-3" />
           <div className="text-slate-400 font-medium">No interviews yet</div>
-          <p className="text-slate-600 text-sm mt-1">Start your first mock interview to begin practising.</p>
+          <p className="text-slate-600 text-sm mt-1">Start your first practice assessment to begin preparing.</p>
         </div>
       ) : (
         <div className="space-y-3">

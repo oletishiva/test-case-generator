@@ -346,7 +346,7 @@ export default function HRInterviewSessionPage() {
             <Mic className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="min-w-0">
-            <div className="text-white font-medium text-sm truncate">HR Round Interview</div>
+            <div className="text-white font-medium text-sm truncate">Technical Interview</div>
             <div className="text-slate-500 text-xs flex items-center gap-1.5">
               <MessageSquare className="w-3 h-3 flex-shrink-0" />
               <span>Q {questionCount}/20</span>

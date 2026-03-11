@@ -56,12 +56,12 @@ export default function InviteCandidatePage() {
             {isHR ? <Mic className="w-4 h-4 text-indigo-400" /> : <Mail className="w-4 h-4 text-blue-400" />}
           </div>
           <h1 className="text-2xl font-bold text-white">
-            {isHR ? "Invite to HR Interview" : "Invite Candidate"}
+            {isHR ? "Invite to Technical Interview" : "Invite Candidate"}
           </h1>
         </div>
         <p className="text-slate-400 text-sm">
           {isHR
-            ? "Send the candidate an invitation to complete an AI-powered HR round interview."
+            ? "Send the candidate an invitation to complete an AI-powered voice technical interview."
             : "Enter the candidate's email address to invite them to this assessment."}
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function InviteCandidatePage() {
             isHR ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-700 text-slate-400 hover:text-white"
           }`}
         >
-          <Mic className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">HR Interview Invite</span>
+          <Mic className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">Tech Interview Invite</span>
         </Link>
       </div>
 
@@ -110,7 +110,7 @@ export default function InviteCandidatePage() {
         {success && (
           <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            {isHR ? "HR interview invite sent!" : "Assessment invite sent!"}
+            {isHR ? "Technical interview invite sent!" : "Assessment invite sent!"}
           </div>
         )}
 
@@ -123,7 +123,7 @@ export default function InviteCandidatePage() {
         >
           {sending
             ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
-            : <><Send className="w-4 h-4" /> {isHR ? "Send HR Invite" : "Send Invite"}</>}
+            : <><Send className="w-4 h-4" /> {isHR ? "Send Tech Invite" : "Send Invite"}</>}
         </button>
       </form>
 

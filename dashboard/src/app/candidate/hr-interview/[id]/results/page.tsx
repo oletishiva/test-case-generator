@@ -83,7 +83,7 @@ export default function HRInterviewResultsPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <Link href="/candidate/hr-interview" className="flex items-center gap-1 text-slate-400 hover:text-white text-sm mb-6 transition-colors">
-        <ChevronLeft className="w-4 h-4" /> Back to HR Interviews
+        <ChevronLeft className="w-4 h-4" /> Back to Technical Interviews
       </Link>
 
       {/* Score card */}
@@ -91,7 +91,7 @@ export default function HRInterviewResultsPage() {
         <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
           <Mic className="w-6 h-6 text-indigo-400" />
         </div>
-        <div className="text-slate-400 text-sm mb-2">HR Round Interview · {session.question_count} questions</div>
+        <div className="text-slate-400 text-sm mb-2">Technical Interview · {session.question_count} questions</div>
         <div className={`text-6xl font-black mb-3 ${scoreColor(score)}`}>{Math.round(score)}%</div>
         <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-semibold ${vs.bg} ${vs.text} ${vs.border}`}>
           <Trophy className="w-4 h-4" /> {verdict}
@@ -196,7 +196,7 @@ export default function HRInterviewResultsPage() {
           href="/candidate/hr-interview"
           className="flex-1 text-center px-4 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-sm transition-colors"
         >
-          Back to Interviews
+          Back to Technical Interviews
         </Link>
         <Link
           href="/candidate/hr-interview"
