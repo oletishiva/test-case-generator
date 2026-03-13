@@ -251,4 +251,104 @@ Output:
     }
     return code;
   }
+
+  private buildMultiFilePrompt(input: string, pageName: string): string {
+    return `You are a senior Playwright TypeScript automation engineer.
+
+Given the following HTML DOM or page description, generate EXACTLY 4 TypeScript files for the page named "${pageName}".
+
+Use semantic Playwright locators in this priority: getByRole > getByLabel > getByPlaceholder > getByText > getByTestId > locator(css).
+
+Output EXACTLY in this format with XML delimiters (no extra text outside the delimiters):
+
+<LOCATORS>
+// TypeScript content for file 1
+</LOCATORS>
+
+<PAGE_OBJECT>
+// TypeScript content for file 2
+</PAGE_OBJECT>
+
+<STEP_DEFINITIONS>
+// TypeScript content for file 3
+</STEP_DEFINITIONS>
+
+<TEST_SCENARIOS>
+// TypeScript content for file 4
+</TEST_SCENARIOS>
+
+---
+
+FILE 1 — ${pageName}.locators.ts (1_Locators folder)
+- Export individual arrow-function locators (NOT a class), one per element
+- Group with section comments (e.g., // === Form Fields ===)
+- Pattern: export const loginHeading = (page: Page) => page.getByRole('heading', { name: 'Log in' });
+- Import at top: import { Page } from '@playwright/test';
+
+FILE 2 — ${pageName}.po.ts (2_Page-Object folder)
+- TypeScript class: export class ${pageName}Page
+- Constructor: constructor(private readonly page: Page) {}
+- Lazy getters for EVERY locator: get loginHeading(): Locator { return this.page.getByRole(...); }
+- Public async action methods: async enterUserId(userId: string) { await this.userIdInput.fill(userId); }
+- Public async assertion helpers: async verifyHeadingVisible() { await expect(this.loginHeading).toBeVisible(); }
+- Convenience methods where applicable (e.g., async login(user, pass))
+- Imports: import { Page, Locator, expect } from '@playwright/test';
+
+FILE 3 — ${pageName}.steps.ts (3_Step-Definitions folder)
+- Reusable async step functions (NOT Cucumber — Playwright style)
+- Each function takes page: Page as first param and creates the POM internally
+- Cover: navigation, form filling, button clicks, assertions
+- Pattern:
+  export async function theUserEntersUserId(page: Page, userId: string) {
+    const po = new ${pageName}Page(page);
+    await po.enterUserId(userId);
+  }
+- Import the Page Object: import { ${pageName}Page } from '../2_Page-Object/${pageName}.po';
+- Imports: import { Page } from '@playwright/test';
+
+FILE 4 — ${pageName}.spec.ts (4_Test-Scenarios folder)
+- Full Playwright test file with 4-6 meaningful test scenarios
+- test.describe block, beforeEach sets up page and navigates
+- Each test focuses on ONE specific user flow or validation
+- Use the Page Object (NOT the locators file directly)
+- Include positive + negative scenarios
+- Pattern:
+  import { test, expect } from '@playwright/test';
+  import { ${pageName}Page } from '../2_Page-Object/${pageName}.po';
+
+  test.describe('${pageName} Tests', () => {
+    let po: ${pageName}Page;
+    test.beforeEach(async ({ page }) => { po = new ${pageName}Page(page); await page.goto('/'); });
+    test('should display all form elements', async ({ page }) => { ... });
+  });
+
+HTML/DOM Input:
+${input}
+`;
+  }
+
+  async generateMultiFile(
+    input: string,
+    pageName: string
+  ): Promise<{ locators: string; pageObject: string; stepDefs: string; scenarios: string }> {
+    const prompt = this.buildMultiFilePrompt(input, pageName);
+    const raw = await this.generateFn(prompt);
+
+    function extract(tag: string): string {
+      const m = raw.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "i"));
+      if (!m) return `// ${tag} generation failed`;
+      let code = m[1].trim();
+      if (code.startsWith("```")) {
+        code = code.replace(/^```[a-zA-Z]*\n?/, "").replace(/```\s*$/, "").trim();
+      }
+      return code;
+    }
+
+    return {
+      locators:   extract("LOCATORS"),
+      pageObject: extract("PAGE_OBJECT"),
+      stepDefs:   extract("STEP_DEFINITIONS"),
+      scenarios:  extract("TEST_SCENARIOS"),
+    };
+  }
 }
