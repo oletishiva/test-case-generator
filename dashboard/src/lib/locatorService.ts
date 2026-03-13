@@ -295,32 +295,71 @@ FILE 2 — ${pageName}.po.ts (2_Page-Object folder)
 - Imports: import { Page, Locator, expect } from '@playwright/test';
 
 FILE 3 — ${pageName}.steps.ts (3_Step-Definitions folder)
-- Reusable async step functions (NOT Cucumber — Playwright style)
-- Each function takes page: Page as first param and creates the POM internally
-- Cover: navigation, form filling, button clicks, assertions
+- Cucumber BDD step definitions in TypeScript using @cucumber/cucumber
+- Use @Given, @When, @Then, @And decorators
+- Each step maps to a line in the .feature file
+- Use the Page Object for all interactions (create POM instance on first step using World context)
+- Cover: page navigation/loading, form filling, button clicks, assertions, error states
 - Pattern:
-  export async function theUserEntersUserId(page: Page, userId: string) {
-    const po = new ${pageName}Page(page);
-    await po.enterUserId(userId);
-  }
-- Import the Page Object: import { ${pageName}Page } from '../2_Page-Object/${pageName}.po';
-- Imports: import { Page } from '@playwright/test';
-
-FILE 4 — ${pageName}.spec.ts (4_Test-Scenarios folder)
-- Full Playwright test file with 4-6 meaningful test scenarios
-- test.describe block, beforeEach sets up page and navigates
-- Each test focuses on ONE specific user flow or validation
-- Use the Page Object (NOT the locators file directly)
-- Include positive + negative scenarios
-- Pattern:
-  import { test, expect } from '@playwright/test';
+  import { Given, When, Then, And } from '@cucumber/cucumber';
+  import { expect } from '@playwright/test';
   import { ${pageName}Page } from '../2_Page-Object/${pageName}.po';
 
-  test.describe('${pageName} Tests', () => {
-    let po: ${pageName}Page;
-    test.beforeEach(async ({ page }) => { po = new ${pageName}Page(page); await page.goto('/'); });
-    test('should display all form elements', async ({ page }) => { ... });
+  let po: ${pageName}Page;
+
+  Given('the user is on the ${pageName} page', async function() {
+    po = new ${pageName}Page(this.page);
+    await po.verifyHeadingVisible();
   });
+
+  When('the user enters {string} in the username field', async function(username: string) {
+    await po.enterUserId(username);
+  });
+
+  Then('the login button should be enabled', async function() {
+    await expect(po.loginButton).toBeEnabled();
+  });
+- Generate steps for ALL scenarios in the feature file
+- Import: import { Given, When, Then, And } from '@cucumber/cucumber';
+
+FILE 4 — ${pageName}.feature (4_Feature-Files folder)
+- Gherkin feature file with BDD scenarios
+- Feature title and As a/I want/So that user story header
+- 4-5 Scenarios covering: happy path, validation, negative cases, edge cases
+- Use Background for shared setup steps
+- Use Scenario Outline with Examples table for data-driven tests where applicable
+- Pattern:
+  Feature: ${pageName.replace(/([A-Z])/g, ' $1').trim()}
+    As a registered user
+    I want to [perform key action from page]
+    So that [benefit]
+
+    Background:
+      Given the user navigates to the application
+
+    Scenario: Verify page loads with all required elements
+      Given the user is on the ${pageName} page
+      Then all mandatory form fields should be visible
+      And the submit button should be displayed
+
+    Scenario: Successful [main action] with valid data
+      Given the user is on the ${pageName} page
+      When the user enters "validUser" in the username field
+      And the user enters "ValidPass123" in the password field
+      And the user clicks the submit button
+      Then the user should be redirected to the dashboard
+
+    Scenario Outline: [Action] with different data sets
+      Given the user is on the ${pageName} page
+      When the user enters "<username>" in the username field
+      And the user enters "<password>" in the password field
+      Then <expected_result>
+
+      Examples:
+        | username    | password      | expected_result                    |
+        | validUser   | ValidPass123  | the user is logged in successfully |
+        | invalidUser | wrongPass     | an error message should be shown   |
+- Output PLAIN GHERKIN TEXT ONLY — no code fences, no backticks, no markdown
 
 HTML/DOM Input:
 ${input}
